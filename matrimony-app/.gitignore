@@ -27,3 +27,4 @@ Thumbs.db
 
 # Redis snapshots
 *.rdb
+*.tsbuildinfo
