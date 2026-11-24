@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, setTokens } from "../api/client";
+import { Logo } from "../components/AppShell";
 import type { LoginResponse, OtpSent } from "../api/types";
 
 export default function Login() {
@@ -34,15 +35,38 @@ export default function Login() {
       }),
     onSuccess: (r) => {
       setTokens(r);
-      navigate("/", { replace: true });
+      navigate(r.has_profile ? "/" : "/register", { replace: true });
     },
   });
 
   const error = (step === "phone" ? send.error : verify.error ?? send.error)?.message;
 
   return (
-    <main className="min-h-screen bg-brand-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
+    <main className="grid min-h-screen lg:grid-cols-2">
+      <section className="hidden flex-col justify-between bg-gradient-to-br from-brand-700 to-brand-600 p-12 text-white lg:flex">
+        <span className="flex items-center gap-2 text-lg font-semibold">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-brand-700">♥</span>
+          Matrimony
+        </span>
+        <div>
+          <h2 className="text-4xl font-semibold leading-tight">
+            Find a life partner,
+            <br />
+            the trusted way.
+          </h2>
+          <ul className="mt-8 space-y-4 text-white/90">
+            <li>✓ Every profile verified by mobile, and reviewed by our team</li>
+            <li>✓ You control who sees your photos and contact details</li>
+            <li>✓ Chat only opens when both sides are interested</li>
+          </ul>
+        </div>
+        <p className="text-sm text-white/60">Made in India · Your data stays protected under the DPDP Act</p>
+      </section>
+      <div className="flex items-center justify-center bg-brand-50 px-4 py-10 lg:bg-white">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm lg:shadow-none">
+        <div className="mb-6 lg:hidden">
+          <Logo />
+        </div>
         <h1 className="text-2xl font-semibold text-brand-700">Welcome</h1>
         <p className="mt-1 text-sm text-gray-600">Log in or register with your mobile number.</p>
 
@@ -126,6 +150,7 @@ export default function Login() {
         <p className="mt-6 text-xs text-gray-500">
           By continuing you agree to our Terms of Use and Privacy Policy.
         </p>
+      </div>
       </div>
     </main>
   );

@@ -186,3 +186,9 @@ async def test_master_data_cascade(client):
     assert [c["name"] for c in comm] == ["Brahmin", "Reddy"]
     sub = (await client.get("/master/sub-communities", params={"community_id": 10})).json()
     assert sub == [{"id": 100, "name": "Iyer"}]
+
+
+async def test_master_cities_education_occupations(client):
+    assert (await client.get("/master/cities")).status_code == 200
+    assert (await client.get("/master/education-levels")).status_code == 200
+    assert (await client.get("/master/occupations")).status_code == 200
