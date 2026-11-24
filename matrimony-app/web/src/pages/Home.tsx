@@ -18,6 +18,7 @@ import type { Career, Family, Horoscope, MyProfile } from "../api/types";
 import AppShell from "../components/AppShell";
 import ConsentCard from "../components/ConsentCard";
 import Section, { Facts } from "../components/Section";
+import SideRail from "../components/SideRail";
 import { Badge, Card, Field, Input, ProgressRing, Select, Textarea, toNum, toStr } from "../components/ui";
 import {
   DIET,
@@ -151,14 +152,14 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[340px_1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px] 2xl:grid-cols-[340px_1fr_320px]">
         {/* Left column */}
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <Card>
             <div className="flex items-center gap-5">
-              <ProgressRing value={p.completeness} />
+              <ProgressRing value={p.completeness} size={96} />
               <div>
-                <h2 className="font-display text-lg font-semibold">Profile strength</h2>
+                <h2 className="whitespace-nowrap font-display text-lg font-semibold">Profile strength</h2>
                 <p className="mt-1 text-sm text-muted">
                   {p.completeness >= 90 ? "Excellent! You're ready to shine." : "Complete profiles get up to 3× more interest."}
                 </p>
@@ -191,7 +192,7 @@ export default function Home() {
           )}
         </aside>
 
-        {/* Right column */}
+        {/* Main column */}
         <div className="space-y-6">
           {p.candidate_consent_pending && <ConsentCard profile={p} />}
 
@@ -496,6 +497,14 @@ export default function Home() {
             })}
           />
         </div>
+        {/* Premium + safety: last on phones/laptops, own column on wide screens */}
+        <div className="lg:col-span-2 xl:hidden">
+          <SideRail />
+        </div>
+        {/* Right rail (wide screens) */}
+        <aside className="hidden xl:sticky xl:top-24 xl:block xl:self-start">
+          <SideRail />
+        </aside>
       </div>
     </AppShell>
   );

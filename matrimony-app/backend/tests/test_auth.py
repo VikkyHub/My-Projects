@@ -1,9 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import func, select, text, update
 
 from app.core.redis import get_redis
-from app.core.security import hmac_hash
+from app.core.security import hmac_hash, sha256
 from app.db.session import SessionLocal
-from app.models import User
+from app.models import RefreshToken, User
 from tests.conftest import auth
 
 PHONE = "+919876543210"
@@ -79,11 +79,33 @@ async def test_refresh_rotates_and_detects_reuse(client, login):
     new = r.json()["refresh_token"]
     assert new != old
 
-    # Replaying the old (rotated) token = theft -> whole family revoked
+    # Simulate the old token being replayed long after rotation = theft
+    async with SessionLocal() as db:
+        await db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.token_hash == sha256(old))
+            .values(revoked_at=func.now() - text("interval '5 minutes'"))
+        )
+        await db.commit()
     r = await client.post("/auth/refresh", json={"refresh_token": old})
     assert r.status_code == 401 and "reuse" in r.json()["detail"]
+    # ...and the whole family is revoked, including the legit new token
     r = await client.post("/auth/refresh", json={"refresh_token": new})
     assert r.status_code == 401
+
+
+async def test_two_tabs_refreshing_at_once_stay_logged_in(client, login):
+    """Both tabs hold the same refresh token and refresh within the grace window."""
+    old = (await login(PHONE))["refresh_token"]
+    tab1 = await client.post("/auth/refresh", json={"refresh_token": old})
+    tab2 = await client.post("/auth/refresh", json={"refresh_token": old})
+    assert tab1.status_code == 200 and tab2.status_code == 200
+    # both resulting tokens keep working
+    for r in (tab1, tab2):
+        again = await client.post(
+            "/auth/refresh", json={"refresh_token": r.json()["refresh_token"]}
+        )
+        assert again.status_code == 200
 
 
 async def test_logout_revokes_refresh_token(client, login):
@@ -135,3 +157,11 @@ def test_dev_fixed_otp_forbidden_in_prod():
             SMS_PROVIDER="msg91",
             DEV_FIXED_OTP="123456",
         )
+
+
+async def test_logout_is_final_even_right_after_rotation(client, login):
+    old = (await login(PHONE))["refresh_token"]
+    new = (await client.post("/auth/refresh", json={"refresh_token": old})).json()["refresh_token"]
+    assert (await client.post("/auth/logout", json={"refresh_token": new})).status_code == 204
+    r = await client.post("/auth/refresh", json={"refresh_token": new})
+    assert r.status_code == 401

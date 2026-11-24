@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     ACCESS_TOKEN_MINUTES: int = 15
     REFRESH_TOKEN_DAYS: int = 30
+    # A rotated refresh token may be reused for this long (several tabs refreshing at once).
+    # After that, reuse is treated as theft and the whole token family is revoked.
+    REFRESH_REUSE_GRACE_SECONDS: int = 30
 
     CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 

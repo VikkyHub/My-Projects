@@ -77,7 +77,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="pattern-soft min-h-screen pb-20 md:pb-0">
       <header className="sticky top-0 z-20 border-b border-line/70 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl 2xl:max-w-[1440px] sm:px-6 items-center gap-6 px-4 py-3">
           <Logo />
           <nav className="hidden flex-1 items-center gap-1 md:flex">
             {NAV.map((n) => (
@@ -97,7 +97,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8">{children}</main>
+      <main className="mx-auto max-w-7xl 2xl:max-w-[1440px] sm:px-6 px-4 py-6 sm:py-8">{children}</main>
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">

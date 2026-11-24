@@ -1,15 +1,16 @@
 """Refresh-token rotation with reuse detection.
 
 Every refresh revokes the presented token and issues a new one in the same family.
-If an already-revoked token is presented again, someone copied it -> revoke the whole
-family (logs out the attacker and the real user, who simply logs in again).
+If an already-revoked token is presented again after a short grace period (which covers
+several browser tabs refreshing at once), someone copied it -> revoke the whole family
+(logs out the attacker and the real user, who simply logs in again).
 """
 
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -55,14 +56,31 @@ async def rotate(db: AsyncSession, raw_refresh: str) -> TokenPair:
         raise TokenError("Invalid refresh token")
 
     if rt.revoked_at is not None:
-        # Reuse of a rotated token => theft. Kill the family.
-        await db.execute(
-            update(RefreshToken)
-            .where(RefreshToken.family_id == rt.family_id, RefreshToken.revoked_at.is_(None))
-            .values(revoked_at=now)
-        )
-        await db.commit()
-        raise TokenError("Refresh token reuse detected. Please log in again.")
+        in_grace = (now - rt.revoked_at).total_seconds() <= settings.REFRESH_REUSE_GRACE_SECONDS
+        if rt.revoked_reason == "rotated" and in_grace:
+            # Another tab/request refreshed with the same token moments ago: not theft.
+            user = await db.get(User, rt.user_id)
+            if user is None or user.status != UserStatus.ACTIVE:
+                raise TokenError("Account is not active")
+            pair = await issue_tokens(db, user, rt.device_id, family_id=rt.family_id)
+            await db.commit()
+            return pair
+        # Reuse of a rotated token long after => theft. Kill the family.
+        if rt.revoked_reason == "rotated":
+            # Kill every token in the family, including recently rotated ones still in grace
+            await db.execute(
+                update(RefreshToken)
+                .where(RefreshToken.family_id == rt.family_id, RefreshToken.revoked_at.is_(None))
+                .values(revoked_at=now)
+            )
+            await db.execute(
+                update(RefreshToken)
+                .where(RefreshToken.family_id == rt.family_id)
+                .values(revoked_reason="reuse")
+            )
+            await db.commit()
+            raise TokenError("Refresh token reuse detected. Please log in again.")
+        raise TokenError("Session ended. Please log in again.")
 
     if rt.expires_at <= now:
         raise TokenError("Refresh token expired")
@@ -72,6 +90,7 @@ async def rotate(db: AsyncSession, raw_refresh: str) -> TokenPair:
         raise TokenError("Account is not active")
 
     rt.revoked_at = now
+    rt.revoked_reason = "rotated"
     pair = await issue_tokens(db, user, rt.device_id, family_id=rt.family_id)
     await db.commit()
     return pair
@@ -80,7 +99,10 @@ async def rotate(db: AsyncSession, raw_refresh: str) -> TokenPair:
 async def revoke(db: AsyncSession, raw_refresh: str) -> None:
     await db.execute(
         update(RefreshToken)
-        .where(RefreshToken.token_hash == sha256(raw_refresh), RefreshToken.revoked_at.is_(None))
-        .values(revoked_at=datetime.now(UTC))
+        .where(RefreshToken.token_hash == sha256(raw_refresh))
+        .values(
+            revoked_at=func.coalesce(RefreshToken.revoked_at, datetime.now(UTC)),
+            revoked_reason="logout",
+        )
     )
     await db.commit()

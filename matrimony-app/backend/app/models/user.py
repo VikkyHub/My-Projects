@@ -52,6 +52,8 @@ class RefreshToken(Base):
     device_id: Mapped[str | None] = mapped_column(String(100))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # rotated | logout | reuse. Only "rotated" tokens get the multi-tab grace window.
+    revoked_reason: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = created_at_col()
 
 
