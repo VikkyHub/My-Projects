@@ -18,9 +18,16 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from app.core.config import settings
 
-_ENC_KEY = base64.urlsafe_b64decode(settings.DATA_ENC_KEY)
+try:
+    _ENC_KEY = base64.urlsafe_b64decode(settings.DATA_ENC_KEY)
+except ValueError:
+    _ENC_KEY = b""
 if len(_ENC_KEY) != 32:
-    raise RuntimeError("DATA_ENC_KEY must decode to exactly 32 bytes")
+    raise RuntimeError(
+        "DATA_ENC_KEY in .env is not a valid key. For local dev, delete that line from .env. "
+        'For prod, generate one with: python -c "import os,base64; '
+        'print(base64.urlsafe_b64encode(os.urandom(32)).decode())"'
+    )
 _aes = AESGCM(_ENC_KEY)
 
 
