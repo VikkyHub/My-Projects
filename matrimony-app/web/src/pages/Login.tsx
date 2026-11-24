@@ -1,9 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight, BadgeCheck, EyeOff, HeartHandshake, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, setTokens } from "../api/client";
-import { Logo } from "../components/AppShell";
 import type { LoginResponse, OtpSent } from "../api/types";
+import { Logo } from "../components/AppShell";
+import { Button, ErrorBox, OtpInput, PhoneInput } from "../components/ui";
+
+const PROMISES = [
+  { icon: BadgeCheck, title: "Verified & reviewed", text: "Every profile is mobile-verified and checked by our team." },
+  { icon: EyeOff, title: "You control privacy", text: "Choose who sees your photos and contact details." },
+  { icon: HeartHandshake, title: "Mutual interest first", text: "Chat opens only when both sides say yes." },
+];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,139 +27,158 @@ export default function Login() {
   }, [resendIn]);
 
   const send = useMutation({
-    mutationFn: () =>
-      api<OtpSent>("/auth/otp/send", { method: "POST", body: JSON.stringify({ phone }) }),
+    mutationFn: () => api<OtpSent>("/auth/otp/send", { method: "POST", body: JSON.stringify({ phone }) }),
     onSuccess: (r) => {
       setStep("code");
+      setCode("");
       setResendIn(r.resend_after);
     },
   });
 
   const verify = useMutation({
     mutationFn: () =>
-      api<LoginResponse>("/auth/otp/verify", {
-        method: "POST",
-        body: JSON.stringify({ phone, code }),
-      }),
+      api<LoginResponse>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone, code }) }),
     onSuccess: (r) => {
       setTokens(r);
       navigate(r.has_profile ? "/" : "/register", { replace: true });
     },
   });
 
-  const error = (step === "phone" ? send.error : verify.error ?? send.error)?.message;
+  // Auto-submit once all 6 digits are in
+  useEffect(() => {
+    if (step === "code" && code.length === 6 && !verify.isPending && !verify.isError) verify.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
+  const error = step === "phone" ? send.error?.message : (verify.error ?? send.error)?.message;
 
   return (
-    <main className="grid min-h-screen lg:grid-cols-2">
-      <section className="hidden flex-col justify-between bg-gradient-to-br from-brand-700 to-brand-600 p-12 text-white lg:flex">
-        <span className="flex items-center gap-2 text-lg font-semibold">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-brand-700">♥</span>
-          Matrimony
-        </span>
-        <div>
-          <h2 className="text-4xl font-semibold leading-tight">
-            Find a life partner,
-            <br />
-            the trusted way.
-          </h2>
-          <ul className="mt-8 space-y-4 text-white/90">
-            <li>✓ Every profile verified by mobile, and reviewed by our team</li>
-            <li>✓ You control who sees your photos and contact details</li>
-            <li>✓ Chat only opens when both sides are interested</li>
-          </ul>
+    <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      {/* Hero */}
+      <section className="hero-rani relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-gold-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-brand-400/30 blur-3xl" />
+
+        <Logo light />
+
+        <div className="relative max-w-lg">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-gold-200 ring-1 ring-white/15">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-300" /> Trusted matchmaking
+          </p>
+          <h1 className="font-display text-5xl font-semibold leading-[1.1] text-white">
+            Where families meet, <span className="italic text-gold-300">and forever</span> begins.
+          </h1>
+          <p className="mt-5 text-lg text-white/75">
+            A safe, private and respectful place to find your life partner — for you, or for someone you love.
+          </p>
+
+          <div className="mt-10 space-y-4">
+            {PROMISES.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="flex gap-4 rounded-2xl bg-white/[0.07] p-4 ring-1 ring-white/10 backdrop-blur-sm">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-300/15 text-gold-300">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="font-semibold text-white">{title}</p>
+                  <p className="text-sm text-white/65">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <p className="text-sm text-white/60">Made in India · Your data stays protected under the DPDP Act</p>
+
+        <p className="relative flex items-center gap-2 text-sm text-white/55">
+          <ShieldCheck className="h-4 w-4" /> Your data is protected under India's DPDP Act
+        </p>
       </section>
-      <div className="flex items-center justify-center bg-brand-50 px-4 py-10 lg:bg-white">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm lg:shadow-none">
-        <div className="mb-6 lg:hidden">
+
+      {/* Form */}
+      <section className="pattern-soft flex flex-col items-center justify-center px-5 py-10">
+        <div className="mb-8 lg:hidden">
           <Logo />
         </div>
-        <h1 className="text-2xl font-semibold text-brand-700">Welcome</h1>
-        <p className="mt-1 text-sm text-gray-600">Log in or register with your mobile number.</p>
 
-        {step === "phone" ? (
-          <form
-            className="mt-6 space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              send.mutate();
-            }}
-          >
-            <label className="block text-sm font-medium text-gray-700">
-              Mobile number
-              <div className="mt-1 flex rounded-lg border border-gray-300 focus-within:ring-2 focus-within:ring-brand-600">
-                <span className="px-3 py-2 text-gray-500">+91</span>
-                <input
-                  className="w-full rounded-r-lg py-2 pr-3 outline-none"
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  maxLength={10}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  placeholder="98765 43210"
-                  required
+        <div className="animate-rise w-full max-w-md rounded-[2rem] bg-white p-8 shadow-soft ring-1 ring-line/70 sm:p-10">
+          {step === "phone" ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send.mutate();
+              }}
+            >
+              <h2 className="font-display text-3xl font-semibold">Welcome</h2>
+              <p className="mt-2 text-muted">Log in or create your profile with your mobile number.</p>
+
+              <div className="mt-8">
+                <label className="mb-2 block text-sm font-semibold">Mobile number</label>
+                <PhoneInput value={phone} onChange={setPhone} autoFocus />
+              </div>
+
+              <Button size="lg" className="mt-6 w-full" disabled={phone.length !== 10} loading={send.isPending}>
+                Get OTP <ArrowRight className="h-4 w-4" />
+              </Button>
+            </form>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                verify.mutate();
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("phone");
+                  verify.reset();
+                }}
+                className="mb-6 flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-brand-700"
+              >
+                <ArrowLeft className="h-4 w-4" /> Change number
+              </button>
+              <h2 className="font-display text-3xl font-semibold">Enter the code</h2>
+              <p className="mt-2 text-muted">
+                We sent a 6-digit code to <span className="font-semibold text-ink">+91 {phone}</span>
+              </p>
+
+              <div className="mt-8">
+                <OtpInput
+                  value={code}
+                  onChange={(v) => {
+                    if (verify.isError) verify.reset();
+                    setCode(v);
+                  }}
                 />
               </div>
-            </label>
-            <button
-              className="w-full rounded-lg bg-brand-600 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-              disabled={phone.length !== 10 || send.isPending}
-            >
-              {send.isPending ? "Sending…" : "Send OTP"}
-            </button>
-          </form>
-        ) : (
-          <form
-            className="mt-6 space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              verify.mutate();
-            }}
-          >
-            <p className="text-sm text-gray-600">
-              Enter the 6-digit code sent to +91 {phone}.{" "}
-              <button type="button" className="text-brand-600 underline" onClick={() => setStep("phone")}>
-                Change
-              </button>
-            </p>
-            <input
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-xl tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand-600"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-              autoFocus
-              required
-            />
-            <button
-              className="w-full rounded-lg bg-brand-600 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-              disabled={code.length !== 6 || verify.isPending}
-            >
-              {verify.isPending ? "Verifying…" : "Verify & continue"}
-            </button>
-            <button
-              type="button"
-              className="w-full text-sm text-gray-600 disabled:opacity-50"
-              disabled={resendIn > 0 || send.isPending}
-              onClick={() => send.mutate()}
-            >
-              {resendIn > 0 ? `Resend OTP in ${resendIn}s` : "Resend OTP"}
-            </button>
-          </form>
-        )}
 
-        {error && (
-          <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
+              <Button size="lg" className="mt-6 w-full" disabled={code.length !== 6} loading={verify.isPending}>
+                Verify & continue
+              </Button>
+
+              <p className="mt-5 text-center text-sm text-muted">
+                Didn't get it?{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-brand-700 hover:underline disabled:font-normal disabled:text-muted disabled:no-underline"
+                  disabled={resendIn > 0 || send.isPending}
+                  onClick={() => send.mutate()}
+                >
+                  {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend OTP"}
+                </button>
+              </p>
+            </form>
+          )}
+
+          <div className="mt-6">
+            <ErrorBox message={error} />
+          </div>
+
+          <p className="mt-8 border-t border-line pt-6 text-center text-xs leading-relaxed text-muted">
+            By continuing you agree to our{" "}
+            <a href="#" className="font-semibold text-ink hover:text-brand-700">Terms</a> and{" "}
+            <a href="#" className="font-semibold text-ink hover:text-brand-700">Privacy Policy</a>.
           </p>
-        )}
-        <p className="mt-6 text-xs text-gray-500">
-          By continuing you agree to our Terms of Use and Privacy Policy.
-        </p>
-      </div>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

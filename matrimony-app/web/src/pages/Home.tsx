@@ -1,11 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  BadgeCheck,
+  Briefcase,
+  Camera,
+  Check,
+  Circle,
+  Hash,
+  Home as HomeIcon,
+  MapPin,
+  MoonStar,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { ApiError, api } from "../api/client";
 import type { Career, Family, Horoscope, MyProfile } from "../api/types";
 import AppShell from "../components/AppShell";
 import ConsentCard from "../components/ConsentCard";
 import Section, { Facts } from "../components/Section";
-import { Badge, Card, Field, Input, Progress, Select, Textarea, toNum, toStr } from "../components/ui";
+import { Badge, Card, Field, Input, ProgressRing, Select, Textarea, toNum, toStr } from "../components/ui";
 import {
   DIET,
   EMPLOYED_IN,
@@ -34,7 +47,7 @@ import {
 } from "../lib/master";
 
 const STATUS: Record<MyProfile["status"], { label: string; tone: "gray" | "green" | "amber" | "red" }> = {
-  draft: { label: "Awaiting candidate consent", tone: "amber" },
+  draft: { label: "Awaiting consent", tone: "amber" },
   pending_review: { label: "Under review", tone: "amber" },
   active: { label: "Live", tone: "green" },
   hidden: { label: "Hidden", tone: "gray" },
@@ -45,16 +58,16 @@ const STATUS: Record<MyProfile["status"], { label: string; tone: "gray" | "green
 const lbl = <T extends Record<string, string>>(map: T, v: string | null | undefined) =>
   v ? (map as Record<string, string>)[v] : undefined;
 
-function todo(p: MyProfile): string[] {
-  const t: string[] = [];
-  if (!p.about_me || p.about_me.length < 50) t.push("Write a few lines about yourself");
-  if (!p.diet) t.push("Add diet & lifestyle");
-  if (!p.family?.father_occupation && !p.family?.family_type) t.push("Add family details");
-  if (!p.career?.education_level_id) t.push("Add education");
-  if (!p.career?.occupation_id) t.push("Add occupation");
-  if (p.career?.annual_income_band == null) t.push("Add income range");
-  t.push("Upload photos (coming soon)");
-  return t;
+function checklist(p: MyProfile): [string, boolean][] {
+  return [
+    ["Basic details", true],
+    ["About me (50+ characters)", !!p.about_me && p.about_me.length >= 50],
+    ["Diet & lifestyle", !!p.diet],
+    ["Family details", !!(p.family?.father_occupation || p.family?.family_type)],
+    ["Education", !!p.career?.education_level_id],
+    ["Occupation & income", !!p.career?.occupation_id && p.career?.annual_income_band != null],
+    ["Photos", false],
+  ];
 }
 
 export default function Home() {
@@ -76,87 +89,141 @@ export default function Home() {
   if (!me.data)
     return (
       <AppShell>
-        {me.error ? <p className="text-red-700">{me.error.message}</p> : <p className="text-gray-500">Loading…</p>}
+        {me.error ? (
+          <p className="text-red-700">{me.error.message}</p>
+        ) : (
+          <div className="space-y-6">
+            <div className="h-64 animate-pulse rounded-[2rem] bg-white/70" />
+            <div className="h-40 animate-pulse rounded-3xl bg-white/70" />
+          </div>
+        )}
       </AppShell>
     );
 
   const p = me.data;
   const city = cities.data?.find((c) => c.id === p.city_id);
   const status = STATUS[p.status];
-  const missing = todo(p);
+  const items = checklist(p);
+  const initials = `${p.first_name[0]}${p.last_name?.[0] ?? ""}`;
 
   return (
     <AppShell>
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        {/* Left: summary */}
-        <aside className="space-y-6">
-          <Card className="text-center">
-            <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-brand-50 text-3xl font-semibold text-brand-700">
-              {p.first_name[0]}
-              {p.last_name?.[0] ?? ""}
+      {/* Cover + identity */}
+      <section className="animate-rise overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-line/70">
+        <div className="hero-rani relative h-36 sm:h-44">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-64 w-64 rounded-full bg-gold-400/30 blur-3xl" />
+          <div className="absolute right-5 top-5 flex gap-2">
+            <Badge tone={status.tone}>{status.label}</Badge>
+          </div>
+        </div>
+        <div className="flex flex-col gap-5 px-6 pb-6 sm:flex-row sm:items-end sm:px-8">
+          <div className="relative z-10 -mt-14 shrink-0 sm:-mt-16">
+            <div className="w-fit rounded-full bg-gradient-to-br from-gold-200 via-gold-400 to-brand-500 p-1 shadow-lg">
+              <div className="grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 font-display text-4xl font-semibold text-white ring-4 ring-white sm:h-32 sm:w-32">
+                {initials}
+              </div>
             </div>
-            <h1 className="mt-4 text-xl font-semibold text-gray-900">
+          </div>
+          <div className="flex-1 pb-1 sm:pt-5">
+            <h1 className="font-display text-3xl font-semibold sm:text-4xl">
               {p.first_name} {p.last_name}
             </h1>
-            <p className="text-sm text-gray-600">
-              {p.age} yrs{p.height_cm ? ` · ${heightLabel(p.height_cm)?.split(" (")[0]}` : ""}
-              {city ? ` · ${city.name}` : ""}
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-muted">
+              <span>{p.age} yrs</span>
+              {p.height_cm && <span>· {heightLabel(p.height_cm)?.split(" (")[0]}</span>}
+              {[nameOf(religions.data, p.religion_id), nameOf(communities.data, p.community_id)].filter(Boolean).length > 0 && (
+                <span>
+                  · {[nameOf(religions.data, p.religion_id), nameOf(communities.data, p.community_id)].filter(Boolean).join(", ")}
+                </span>
+              )}
+              {city && (
+                <span className="inline-flex items-center gap-1">
+                  · <MapPin className="h-4 w-4 text-brand-500" /> {city.name}
+                </span>
+              )}
             </p>
-            <p className="mt-1 text-sm text-gray-600">
-              {[nameOf(religions.data, p.religion_id), nameOf(communities.data, p.community_id)]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <div className="mt-3 flex flex-wrap justify-center gap-2">
-              <Badge tone={status.tone}>{status.label}</Badge>
-              <Badge>ID {p.public_id}</Badge>
-              <Badge tone="green">✓ Mobile verified</Badge>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Badge tone="green" icon={BadgeCheck}>Mobile verified</Badge>
+              <Badge tone="gray" icon={Hash}>{p.public_id}</Badge>
+              {p.created_by !== "self" && <Badge tone="gold">Managed by {p.created_by}</Badge>}
             </div>
-          </Card>
+          </div>
+        </div>
+      </section>
 
+      <div className="mt-6 grid gap-6 lg:grid-cols-[340px_1fr]">
+        {/* Left column */}
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <Card>
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Profile completeness</h2>
-              <span className="text-sm font-semibold text-brand-700">{p.completeness}%</span>
+            <div className="flex items-center gap-5">
+              <ProgressRing value={p.completeness} />
+              <div>
+                <h2 className="font-display text-lg font-semibold">Profile strength</h2>
+                <p className="mt-1 text-sm text-muted">
+                  {p.completeness >= 90 ? "Excellent! You're ready to shine." : "Complete profiles get up to 3× more interest."}
+                </p>
+              </div>
             </div>
-            <div className="mt-3">
-              <Progress value={p.completeness} />
-            </div>
-            <p className="mt-3 text-xs text-gray-500">Complete profiles get up to 3× more responses.</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {missing.map((m) => (
-                <li key={m} className="flex items-center gap-2 text-gray-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand-600" />
-                  {m}
+            <ul className="mt-6 space-y-2.5">
+              {items.map(([label, done]) => (
+                <li key={label} className="flex items-center gap-3 text-sm">
+                  {done ? (
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </span>
+                  ) : (
+                    <Circle className="h-5 w-5 text-line" strokeWidth={2.5} />
+                  )}
+                  <span className={done ? "text-muted line-through decoration-line" : "font-medium text-ink"}>{label}</span>
                 </li>
               ))}
             </ul>
           </Card>
 
           {p.status === "pending_review" && (
-            <Card className="bg-gray-50">
-              <p className="text-sm text-gray-600">
-                <strong className="text-gray-900">What happens next?</strong> Our team reviews every
-                profile to keep the platform safe. Once approved, your profile will appear in searches.
+            <div className="rounded-3xl bg-gradient-to-br from-brand-800 to-brand-600 p-6 text-white shadow-soft">
+              <Sparkles className="h-6 w-6 text-gold-300" />
+              <h3 className="mt-3 font-display text-lg font-semibold text-white">What happens next?</h3>
+              <p className="mt-1 text-sm leading-relaxed text-white/80">
+                Our team reviews every profile to keep the community safe. Once approved, you'll appear in matches.
               </p>
-            </Card>
+            </div>
           )}
         </aside>
 
-        {/* Right: details */}
+        {/* Right column */}
         <div className="space-y-6">
           {p.candidate_consent_pending && <ConsentCard profile={p} />}
 
-          <Card className="border-dashed">
-            <h2 className="text-base font-semibold text-gray-900">Photos</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Photo upload with privacy controls is coming next. Profiles with photos get far more interest.
-            </p>
+          <Card>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-rose-50 text-rose-500">
+                  <Camera className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="font-display text-lg font-semibold">Photos</h2>
+                  <p className="text-xs font-medium text-muted">Upload with privacy controls — coming next</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`grid aspect-[3/4] place-items-center rounded-2xl border-2 border-dashed border-brand-100 bg-brand-50/40 text-brand-300 ${i === 3 ? "hidden sm:grid" : ""}`}
+                >
+                  <Camera className="h-6 w-6" />
+                </div>
+              ))}
+            </div>
           </Card>
 
           <Section
             key={`basic-${p.religion_id}-${p.community_id}-${p.city_id}-${p.height_cm}`}
             title="Basic details"
+            icon={UserRound}
+            color="brand"
             initial={{
               first_name: p.first_name,
               last_name: p.last_name ?? "",
@@ -191,11 +258,17 @@ export default function Home() {
 
           <Section
             title="About & lifestyle"
+            icon={Sparkles}
+            color="rose"
             initial={{ about_me: p.about_me ?? "", diet: p.diet ?? "", smoke: p.smoke ?? "", drink: p.drink ?? "" }}
             empty={!p.about_me && !p.diet}
             view={
               <div className="space-y-4">
-                {p.about_me && <p className="whitespace-pre-line text-sm text-gray-700">{p.about_me}</p>}
+                {p.about_me && (
+                  <p className="whitespace-pre-line rounded-2xl bg-sand/50 p-4 font-display text-[17px] italic leading-relaxed text-ink/85">
+                    “{p.about_me}”
+                  </p>
+                )}
                 <Facts
                   items={[
                     ["Diet", lbl(DIET, p.diet)],
@@ -233,6 +306,8 @@ export default function Home() {
 
           <Section
             title="Education & career"
+            icon={Briefcase}
+            color="gold"
             initial={blankCareer(p.career)}
             empty={!p.career}
             view={
@@ -297,6 +372,8 @@ export default function Home() {
 
           <Section
             title="Family"
+            icon={HomeIcon}
+            color="teal"
             initial={blankFamily(p.family)}
             empty={!p.family}
             view={
@@ -362,6 +439,8 @@ export default function Home() {
 
           <Section
             title="Horoscope"
+            icon={MoonStar}
+            color="violet"
             subtitle="Optional"
             initial={blankHoroscope(p.horoscope)}
             empty={!p.horoscope}
@@ -463,7 +542,7 @@ function BasicForm({ v, set }: { v: BasicValues; set: (p: Partial<BasicValues>) 
   const opts = (l?: { id: number; name: string }[]) => (l ?? []).map((o) => ({ value: o.id, label: o.name }));
   return (
     <>
-      <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+      <p className="rounded-2xl bg-sand/60 px-4 py-3 text-xs text-muted">
         Gender and date of birth can't be changed here. Contact support if they're wrong.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
