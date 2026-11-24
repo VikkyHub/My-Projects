@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Matrimony"
     API_PREFIX: str = "/api/v1"
 
-    DATABASE_URL: str = "postgresql+asyncpg://matri:matri@localhost:5432/matrimony"
+    DATABASE_URL: str = "postgresql+asyncpg://matri:matri@localhost:5433/matrimony"
     REDIS_URL: str = "redis://localhost:6379/0"
 
     JWT_SECRET: str = "dev-only-jwt-secret-change-me-0123456789"
