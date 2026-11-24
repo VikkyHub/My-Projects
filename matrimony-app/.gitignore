@@ -24,3 +24,6 @@ mobile/**/.dart_tool/
 Thumbs.db
 .vscode/
 .idea/
+
+# Redis snapshots
+*.rdb
