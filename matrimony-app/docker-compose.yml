@@ -8,8 +8,9 @@ services:
       POSTGRES_USER: matri
       POSTGRES_PASSWORD: matri
       POSTGRES_DB: matrimony
-    # 5433 on the host so it never clashes with a PostgreSQL already installed on Windows
-    ports: ["5433:5432"]
+    # 55432 on the host: unusual port so it never clashes with PostgreSQL installs on
+    # Windows (they default to 5432, and a second install takes 5433)
+    ports: ["55432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/scripts/init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql:ro

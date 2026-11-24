@@ -8,7 +8,7 @@ import os
 
 os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = os.getenv(
-    "TEST_DATABASE_URL", "postgresql+asyncpg://matri:matri@localhost:5433/matrimony_test"
+    "TEST_DATABASE_URL", "postgresql+asyncpg://matri:matri@localhost:55432/matrimony_test"
 )
 os.environ["REDIS_URL"] = os.getenv("TEST_REDIS_URL", "redis://localhost:6379/15")
 
