@@ -28,14 +28,14 @@ export default function StaffPage() {
   return (
     <AdminLayout>
       <PageHead title="Staff" sub="Moderators review profiles, photos and reports. Admins can also ban, manage staff and see the audit log.">
-        <Button className="!bg-none !bg-slate-900 !shadow-none hover:!bg-slate-800" onClick={() => setOpen(true)}><UserPlus className="h-4 w-4" /> Invite staff</Button>
+        <Button className="" onClick={() => setOpen(true)}><UserPlus className="h-4 w-4" /> Invite staff</Button>
       </PageHead>
 
       {issued && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+        <div className="mb-6 rounded-3xl bg-gradient-to-br from-gold-50 to-brand-50 p-6 text-sm text-ink shadow-soft ring-1 ring-gold-200">
           <p className="font-semibold">Temporary password for {issued.email} — shown only once</p>
           <div className="mt-2 flex items-center gap-2">
-            <code className="select-all rounded-md bg-white px-3 py-1.5 font-mono ring-1 ring-amber-200">{issued.password}</code>
+            <code className="select-all rounded-xl bg-white px-3 py-1.5 font-mono text-base ring-1 ring-gold-200">{issued.password}</code>
             <button onClick={() => navigator.clipboard?.writeText(issued.password)} className="rounded-md p-1.5 hover:bg-amber-100" aria-label="Copy"><Copy className="h-4 w-4" /></button>
           </div>
           <p className="mt-2">Share it privately (not by email). On first sign-in at <strong>/admin/login</strong> they set a new password and their authenticator app.</p>
@@ -47,8 +47,8 @@ export default function StaffPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-3">Name</th>
+              <tr className="border-b border-line bg-sand/40 text-left text-xs font-bold uppercase tracking-wider text-muted">
+                <th className="px-6 py-3.5">Name</th>
                 <th className="px-3 py-3">Role</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">2-step</th>
@@ -58,27 +58,36 @@ export default function StaffPage() {
             </thead>
             <tbody>
               {list.data?.map((s) => (
-                <tr key={s.id} className="border-b border-slate-50 last:border-0">
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-slate-900">{s.name}{s.id === me.data?.id && <span className="ml-1.5 text-xs text-slate-400">(you)</span>}</p>
-                    <p className="text-xs text-slate-500">{s.email}</p>
+                <tr key={s.id} className="border-b border-line/60 last:border-0">
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full font-display text-base font-semibold text-white ${s.role === "admin" ? "bg-gradient-to-br from-brand-500 to-brand-800" : "bg-gradient-to-br from-violet-400 to-violet-700"}`}>
+                        {(s.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-ink">{s.name}{s.id === me.data?.id && <span className="ml-1.5 text-xs font-normal text-muted">(you)</span>}</p>
+                        <p className="text-xs text-muted">{s.email}</p>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-3 py-3 capitalize">{s.role}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-4">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${s.role === "admin" ? "bg-gold-50 text-gold-600 ring-1 ring-gold-200" : "bg-violet-50 text-violet-700 ring-1 ring-violet-100"}`}>{s.role}</span>
+                  </td>
+                  <td className="px-3 py-4">
                     {s.status === "active" ? (
                       <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"><ShieldCheck className="h-3.5 w-3.5" /> Active</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200"><ShieldOff className="h-3.5 w-3.5" /> Disabled</span>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-sand px-2 py-0.5 text-xs font-semibold text-ink/75 ring-1 ring-line"><ShieldOff className="h-3.5 w-3.5" /> Disabled</span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
-                    {s.totp_enabled ? <span className="flex items-center gap-1 text-emerald-700"><ShieldCheck className="h-4 w-4" /> On</span> : <span className="flex items-center gap-1 text-slate-500"><ShieldOff className="h-4 w-4" /> Not set up</span>}
+                  <td className="px-3 py-4">
+                    {s.totp_enabled ? <span className="flex items-center gap-1 text-emerald-700"><ShieldCheck className="h-4 w-4" /> On</span> : <span className="flex items-center gap-1 text-muted"><ShieldOff className="h-4 w-4" /> Not set up</span>}
                   </td>
-                  <td className="px-3 py-3 text-slate-500">{when(s.last_login_at)}</td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-3 py-4 text-muted">{when(s.last_login_at)}</td>
+                  <td className="px-3 py-4 text-right">
                     {s.id !== me.data?.id && (
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => confirm(`Reset ${s.name}'s password and authenticator?`) && act.mutate({ id: s.id, a: "reset" })} className="text-xs font-semibold text-slate-600 hover:text-slate-900">Reset login</button>
+                        <button onClick={() => confirm(`Reset ${s.name}'s password and authenticator?`) && act.mutate({ id: s.id, a: "reset" })} className="text-xs font-semibold text-ink/75 hover:text-ink">Reset login</button>
                         {s.status === "active" ? (
                           <button onClick={() => confirm(`Disable ${s.name}? They'll be signed out.`) && act.mutate({ id: s.id, a: "disable" })} className="text-xs font-semibold text-red-700">Disable</button>
                         ) : (
@@ -104,7 +113,7 @@ export default function StaffPage() {
           <ErrorBox message={create.error?.message} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" loading={create.isPending} className="!bg-none !bg-slate-900 !shadow-none">Create & get password</Button>
+            <Button type="submit" loading={create.isPending}>Create & get password</Button>
           </div>
         </form>
       </Modal>

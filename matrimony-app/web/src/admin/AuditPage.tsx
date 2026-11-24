@@ -15,8 +15,8 @@ export default function AuditPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-3">When</th>
+              <tr className="border-b border-line bg-sand/40 text-left text-xs font-bold uppercase tracking-wider text-muted">
+                <th className="px-6 py-3.5">When</th>
                 <th className="px-3 py-3">Staff</th>
                 <th className="px-3 py-3">Action</th>
                 <th className="px-3 py-3">Target</th>
@@ -25,22 +25,22 @@ export default function AuditPage() {
             </thead>
             <tbody>
               {list.data?.map((a) => (
-                <tr key={a.id} className="border-b border-slate-50 last:border-0">
-                  <td className="whitespace-nowrap px-5 py-2.5 text-slate-500">{when(a.created_at)}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-800">{a.staff}</td>
-                  <td className="px-3 py-2.5">{ACTION_LABEL[a.action] ?? a.action}</td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">
+                <tr key={a.id} className="border-b border-line/60 last:border-0">
+                  <td className="whitespace-nowrap px-6 py-3.5 text-muted">{when(a.created_at)}</td>
+                  <td className="px-3 py-3.5 font-medium text-ink">{a.staff}</td>
+                  <td className="px-3 py-3.5">{ACTION_LABEL[a.action] ?? a.action}</td>
+                  <td className="px-3 py-3.5 font-mono text-xs text-ink/75">
                     {a.target_type === "profile" ? <Link to={`/admin/profiles/${a.target_id}`} className="hover:underline">{a.target_id}</Link> : `${a.target_type}`}
                   </td>
-                  <td className="max-w-xs truncate px-3 py-2.5 text-slate-600" title={a.reason ?? ""}>{a.reason ?? "—"}</td>
+                  <td className="max-w-xs truncate px-3 py-2.5 text-ink/75" title={a.reason ?? ""}>{a.reason ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="flex justify-between border-t border-slate-100 px-5 py-3 text-sm">
-          <button disabled={page === 1} onClick={() => setPage(page - 1)} className="font-medium text-slate-600 disabled:opacity-40">← Newer</button>
-          <button disabled={(list.data?.length ?? 0) < 50} onClick={() => setPage(page + 1)} className="font-medium text-slate-600 disabled:opacity-40">Older →</button>
+        <div className="flex justify-between border-t border-line px-5 py-3 text-sm">
+          <button disabled={page === 1} onClick={() => setPage(page - 1)} className="font-medium text-ink/75 disabled:opacity-40">← Newer</button>
+          <button disabled={(list.data?.length ?? 0) < 50} onClick={() => setPage(page + 1)} className="font-medium text-ink/75 disabled:opacity-40">Older →</button>
         </div>
       </Panel>
     </AdminLayout>

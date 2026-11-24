@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Flag, Image, LayoutDashboard, LogOut, ScrollText, Shield, UserCog, Users, type LucideIcon } from "lucide-react";
+import { Flag, Heart, Image, LayoutDashboard, LogOut, ScrollText, UserCog, Users, type LucideIcon } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { admin } from "../api/client";
@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     if (!admin.hasSession() || me.isError) navigate("/admin/login", { replace: true });
   }, [me.isError, navigate]);
 
-  if (!me.data) return <div className="min-h-screen bg-slate-50" />;
+  if (!me.data) return <div className="pattern-soft min-h-screen bg-ivory" />;
   const isAdmin = me.data.role === "admin";
   const nav: { to: string; label: string; icon: LucideIcon; count?: number; show: boolean }[] = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard, show: true },
@@ -27,19 +27,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { to: "/admin/staff", label: "Staff", icon: UserCog, show: isAdmin },
   ];
 
+  const initials = (me.data.name ?? "S").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 lg:flex">
-      <aside className="flex shrink-0 flex-col bg-slate-900 text-slate-300 lg:sticky lg:top-0 lg:h-screen lg:w-60">
-        <div className="flex items-center gap-2.5 px-5 py-5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-white">
-            <Shield className="h-4 w-4" />
+    <div className="pattern-soft min-h-screen bg-ivory font-sans text-ink lg:flex">
+      <aside className="hero-rani relative flex shrink-0 flex-col overflow-hidden text-white lg:sticky lg:top-0 lg:h-screen lg:w-64">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gold-400/25 blur-3xl" />
+        <div className="relative flex items-center gap-2.5 px-5 py-6">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/15 ring-1 ring-white/25">
+            <Heart className="h-5 w-5 fill-gold-300 text-gold-300" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-white">Matrimony</p>
-            <p className="text-[11px] uppercase tracking-wider text-slate-400">Admin panel</p>
+            <p className="font-display text-lg font-semibold leading-tight text-white">Matrimony</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-gold-200">Admin panel</p>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible">
+        <nav className="relative flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible">
           {nav.filter((n) => n.show).map(({ to, label, icon: Icon, count }) => (
             <NavLink
               key={to}
@@ -47,35 +49,40 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               end={to === "/admin"}
               className={({ isActive }) =>
                 cx(
-                  "flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition",
-                  isActive ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white",
+                  "flex items-center gap-3 whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-semibold transition",
+                  isActive ? "bg-white text-brand-800 shadow-lg" : "text-white/80 hover:bg-white/10 hover:text-white",
                 )
               }
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-[18px] w-[18px]" />
               <span className="flex-1">{label}</span>
-              {!!count && <span className="rounded-md bg-amber-400/90 px-1.5 text-xs font-bold text-slate-900">{count}</span>}
+              {!!count && <span className="rounded-full bg-gold-300 px-2 py-0.5 text-xs font-bold text-brand-950">{count}</span>}
             </NavLink>
           ))}
         </nav>
-        <div className="hidden border-t border-white/10 p-4 lg:block">
-          <p className="truncate text-sm font-medium text-white">{me.data.name}</p>
-          <p className="truncate text-xs text-slate-400">{me.data.email}</p>
+        <div className="relative m-3 hidden rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur lg:block">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold-300 to-gold-500 font-display font-semibold text-brand-950">{initials}</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{me.data.name}</p>
+              <p className="truncate text-xs text-white/60">{me.data.email}</p>
+            </div>
+          </div>
           <div className="mt-3 flex items-center justify-between">
-            <span className="rounded bg-white/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-200">{me.data.role}</span>
+            <span className="rounded-full bg-gold-300/20 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-gold-200">{me.data.role}</span>
             <button
               onClick={async () => {
                 await admin.logout();
                 navigate("/admin/login", { replace: true });
               }}
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white"
+              className="flex items-center gap-1.5 text-xs font-semibold text-white/70 hover:text-white"
             >
               <LogOut className="h-3.5 w-3.5" /> Sign out
             </button>
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-10 2xl:px-12">{children}</main>
     </div>
   );
 }
