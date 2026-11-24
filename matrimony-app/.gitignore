@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+
+# Flutter
+mobile/**/build/
+mobile/**/.dart_tool/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

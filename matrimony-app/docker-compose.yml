@@ -1,0 +1,38 @@
+# Local development: Postgres + Redis (+ the API, optional).
+#   docker compose up -d db redis        # just the services; run the API with uvicorn yourself
+#   docker compose up -d                 # everything
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: matri
+      POSTGRES_PASSWORD: matri
+      POSTGRES_DB: matrimony
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/scripts/init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matri"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api:
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://matri:matri@db:5432/matrimony
+      REDIS_URL: redis://redis:6379/0
+    ports: ["8000:8000"]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+
+volumes:
+  pgdata:
