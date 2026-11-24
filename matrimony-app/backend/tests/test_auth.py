@@ -118,3 +118,20 @@ async def test_banned_user_cannot_log_in(client, sms, login):
     await client.post("/auth/otp/send", json={"phone": PHONE})
     r = await client.post("/auth/otp/verify", json={"phone": PHONE, "code": sms.sent[PHONE]})
     assert r.status_code == 403
+
+
+def test_dev_fixed_otp_forbidden_in_prod():
+    import pytest
+    from pydantic import ValidationError
+
+    from app.core.config import Settings
+
+    with pytest.raises(ValidationError, match="DEV_FIXED_OTP"):
+        Settings(
+            ENV="prod",
+            JWT_SECRET="x" * 40,
+            PHONE_HASH_KEY="y" * 40,
+            DATA_ENC_KEY="cHJvZC1rZXktcHJvZC1rZXktcHJvZC1rZXktMzJieXQ=",
+            SMS_PROVIDER="msg91",
+            DEV_FIXED_OTP="123456",
+        )

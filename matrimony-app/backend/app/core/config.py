@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     OTP_MAX_SENDS_PER_PHONE_PER_HOUR: int = 3
     OTP_MAX_SENDS_PER_IP_PER_HOUR: int = 10
 
+    # DEV ONLY: every OTP is this code (e.g. "123456"). Forbidden outside ENV=dev.
+    DEV_FIXED_OTP: str = ""
+
     SMS_PROVIDER: Literal["console", "msg91"] = "console"
     MSG91_AUTH_KEY: str = ""
     MSG91_OTP_TEMPLATE_ID: str = ""
@@ -56,6 +59,8 @@ class Settings(BaseSettings):
                     or val == Settings.model_fields[name].default
                 ):
                     raise ValueError(f"{name} must be set to a real secret in prod")
+            if self.DEV_FIXED_OTP:
+                raise ValueError("DEV_FIXED_OTP must not be set in prod")
             if self.SMS_PROVIDER == "console":
                 raise ValueError("SMS_PROVIDER=console is not allowed in prod")
         return self

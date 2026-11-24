@@ -46,7 +46,10 @@ async def send_otp(
     if not await hit(redis, f"rl:otp:phone:{ph}", settings.OTP_MAX_SENDS_PER_PHONE_PER_HOUR, 3600):
         raise OtpError("Too many OTP requests for this number. Try again in an hour.", 429)
 
-    code = generate_otp(settings.OTP_LENGTH)
+    if settings.ENV == "dev" and settings.DEV_FIXED_OTP:
+        code = settings.DEV_FIXED_OTP
+    else:
+        code = generate_otp(settings.OTP_LENGTH)
     key = _key(purpose, ph)
     pipe = redis.pipeline()
     pipe.delete(key)
