@@ -221,6 +221,7 @@ class MyProfileOut(_Orm):
     drink: str | None
     about_me: str | None
     status: str
+    moderation_note: str | None = None
     completeness: int
     is_premium: bool
     family: FamilyOut | None

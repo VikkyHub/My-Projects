@@ -267,6 +267,9 @@ async def update_profile(db: AsyncSession, profile: Profile, data: ProfileUpdate
         for k, v in values.items():
             setattr(section, k, v)
 
+    if profile.status == ProfileStatus.REJECTED:
+        # Member fixed what moderation asked for -> back into the review queue
+        profile.status = _after_consent_status()
     profile.completeness = compute_completeness(profile, await photo_count(db, profile.id))
     await db.commit()
     await db.refresh(profile)

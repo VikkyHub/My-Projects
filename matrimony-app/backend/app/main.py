@@ -4,7 +4,17 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app.api.routers import auth, chat, interests, master, matches, photos, profiles
+from app.api.routers import (
+    admin,
+    admin_auth,
+    auth,
+    chat,
+    interests,
+    master,
+    matches,
+    photos,
+    profiles,
+)
 from app.core.config import settings
 from app.core.redis import close_redis, get_redis
 from app.db.session import SessionLocal, engine
@@ -57,6 +67,8 @@ for r in (
     matches.router,
     interests.router,
     chat.router,
+    admin_auth.router,
+    admin.router,
 ):
     app.include_router(r, prefix=settings.API_PREFIX)
 

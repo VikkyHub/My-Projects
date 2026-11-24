@@ -91,6 +91,7 @@ class Profile(Base):
     about_me: Mapped[str | None] = mapped_column(Text)
 
     status: Mapped[str] = mapped_column(String(20), default=ProfileStatus.DRAFT)
+    moderation_note: Mapped[str | None] = mapped_column(String(300))  # shown to the member
     completeness: Mapped[int] = mapped_column(SmallInteger, default=0)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False)  # denormalized
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

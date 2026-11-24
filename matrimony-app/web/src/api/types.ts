@@ -83,6 +83,7 @@ export interface MyProfile {
   drink: string | null;
   about_me: string | null;
   status: "draft" | "pending_review" | "active" | "hidden" | "rejected" | "suspended";
+  moderation_note: string | null;
   completeness: number;
   is_premium: boolean;
   family: Family | null;

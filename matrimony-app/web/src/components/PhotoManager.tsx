@@ -87,7 +87,7 @@ export default function PhotoManager() {
       </div>
       <p className="mt-2 text-xs text-muted">{VIS.find((v) => v.value === vis)?.hint}. Location data is removed from every photo.</p>
 
-      <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+      <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
         {list.map((p) => (
           <div key={p.id} className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-sand ring-1 ring-line">
             <img src={mediaUrl(p.url)} alt="" className="h-full w-full object-cover" />

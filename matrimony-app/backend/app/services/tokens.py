@@ -31,8 +31,23 @@ class TokenPair:
 
 
 async def issue_tokens(
-    db: AsyncSession, user: User, device_id: str | None, family_id: uuid.UUID | None = None
+    db: AsyncSession,
+    user: User,
+    device_id: str | None,
+    family_id: uuid.UUID | None = None,
+    scope: str = "member",
+    session_expires_at: datetime | None = None,
 ) -> TokenPair:
+    """Member sessions last 30 days. Staff ("admin" scope) sessions end after
+    ADMIN_IDLE_MINUTES without activity, and always at session_expires_at (8h after login)."""
+    now = datetime.now(UTC)
+    if scope == "admin":
+        session_expires_at = session_expires_at or now + timedelta(
+            hours=settings.ADMIN_SESSION_HOURS
+        )
+        expires_at = min(now + timedelta(minutes=settings.ADMIN_IDLE_MINUTES), session_expires_at)
+    else:
+        expires_at = now + timedelta(days=settings.REFRESH_TOKEN_DAYS)
     raw = new_refresh_token()
     db.add(
         RefreshToken(
@@ -40,10 +55,12 @@ async def issue_tokens(
             token_hash=sha256(raw),
             family_id=family_id or uuid.uuid4(),
             device_id=device_id,
-            expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_DAYS),
+            expires_at=expires_at,
+            scope=scope,
+            session_expires_at=session_expires_at,
         )
     )
-    access, expires_in = create_access_token(user.id, user.role)
+    access, expires_in = create_access_token(user.id, user.role, scope)
     return TokenPair(access, raw, expires_in)
 
 
@@ -62,7 +79,9 @@ async def rotate(db: AsyncSession, raw_refresh: str) -> TokenPair:
             user = await db.get(User, rt.user_id)
             if user is None or user.status != UserStatus.ACTIVE:
                 raise TokenError("Account is not active")
-            pair = await issue_tokens(db, user, rt.device_id, family_id=rt.family_id)
+            pair = await issue_tokens(
+                db, user, rt.device_id, rt.family_id, rt.scope, rt.session_expires_at
+            )
             await db.commit()
             return pair
         # Reuse of a rotated token long after => theft. Kill the family.
@@ -91,7 +110,7 @@ async def rotate(db: AsyncSession, raw_refresh: str) -> TokenPair:
 
     rt.revoked_at = now
     rt.revoked_reason = "rotated"
-    pair = await issue_tokens(db, user, rt.device_id, family_id=rt.family_id)
+    pair = await issue_tokens(db, user, rt.device_id, rt.family_id, rt.scope, rt.session_expires_at)
     await db.commit()
     return pair
 

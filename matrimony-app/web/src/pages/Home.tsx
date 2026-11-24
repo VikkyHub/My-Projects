@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   BadgeCheck,
   Briefcase,
   Check,
@@ -205,6 +206,22 @@ export default function Home() {
         {/* Main column */}
         <div className="space-y-6">
           {p.candidate_consent_pending && <ConsentCard profile={p} />}
+          {p.moderation_note && (
+            <section className="animate-rise flex gap-4 rounded-3xl bg-orange-50 p-6 ring-1 ring-orange-200">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white">
+                <AlertTriangle className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="font-display text-lg font-semibold">
+                  {p.status === "rejected" ? "Please update your profile" : "A note from our safety team"}
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-ink/80">{p.moderation_note}</p>
+                {p.status === "rejected" && (
+                  <p className="mt-2 text-xs text-muted">Once you save your changes below, your profile goes back for review automatically.</p>
+                )}
+              </div>
+            </section>
+          )}
 
           <PhotoManager />
 

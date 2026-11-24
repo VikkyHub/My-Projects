@@ -4,8 +4,8 @@ Web-first matrimony platform for India. FastAPI backend, React web app, Flutter 
 
 | Folder | What | Status |
 |---|---|---|
-| `backend/` | FastAPI + PostgreSQL + Redis API | Auth, profiles, photos, matching, interests, chat ✅ |
-| `web/` | React 19 + Vite + Tailwind | Login, registration, profile, matches, interests, messages ✅ |
+| `backend/` | FastAPI + PostgreSQL + Redis API | Auth, profiles, photos, matching, interests, chat, admin ✅ |
+| `web/` | React 19 + Vite + Tailwind | Member app + admin panel (`/admin`) ✅ |
 | `mobile/` | Flutter app | Starts mid-January |
 | `docs/` | Decisions, roadmap, schema | |
 
@@ -74,6 +74,35 @@ cd backend
 pytest
 ```
 
+## Admin panel
+
+Staff use a **separate login** at **http://localhost:5173/admin/login**: work email + password +
+a 6-digit code from Google/Microsoft Authenticator. Members can never reach it with their phone OTP.
+
+**Create your first admin** (backend window, venv active):
+```powershell
+python -m scripts.create_admin --email you@example.com --name "Your Name"
+```
+Sign in, scan the QR code with your authenticator app, done. Invite more staff from **Staff** in the panel.
+
+**Fill the queues with sample work** (4 profiles + photos to review, 3 reports):
+```powershell
+python -m scripts.seed_moderation
+```
+To see real moderation behaviour (new profiles/photos waiting for approval), set
+`DEV_AUTO_APPROVE=false` in `backend\.env` and restart the backend.
+
+| | Moderator | Admin |
+|---|---|---|
+| Review profiles & photos, resolve reports | ✅ | ✅ |
+| Warn / suspend members, reveal phone (logged) | ✅ | ✅ |
+| Ban, lift bans | — | ✅ |
+| Invite/disable staff, reset their login | — | ✅ |
+| Audit log | — | ✅ |
+
+Staff sessions end after 30 minutes idle or 8 hours, and close with the browser. 5 wrong passwords
+lock the account for 15 minutes. Every action is recorded in the audit log.
+
 ## API so far
 Full, live documentation: **http://localhost:8000/docs**
 
@@ -87,6 +116,8 @@ Full, live documentation: **http://localhost:8000/docs**
 | Shortlist / safety | `GET /shortlist`, `PUT/DELETE /shortlist/{public_id}`, `POST /profiles/{public_id}/block`, `POST /profiles/{public_id}/report` |
 | Interests | `POST /interests`, `GET /interests?box=received\|sent\|accepted`, `POST /interests/{id}/accept\|decline\|withdraw`, `GET /interests/counts` |
 | Chat | `GET /conversations`, `GET/POST /conversations/{id}/messages`, `POST /conversations/{id}/read`, `WS /ws?ticket=` |
+| Staff auth | `POST /admin/auth/login`, `POST /admin/auth/verify`, `GET /admin/auth/me` |
+| Admin | `GET /admin/stats`, `GET /admin/profiles`, `GET /admin/profiles/{id}`, `POST …/moderate`, `POST …/reveal-phone`, `GET /admin/photos`, `POST /admin/photos/{id}/moderate`, `GET /admin/reports`, `POST /admin/reports/{id}/resolve`, `GET /admin/audit`, `GET/POST /admin/staff`, `POST /admin/staff/{id}/disable\|enable\|reset` |
 
 ## Rules already enforced in code
 - Phone numbers are stored **HMAC-hashed + AES-GCM encrypted**, never as plain text.

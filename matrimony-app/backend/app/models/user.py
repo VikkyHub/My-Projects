@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, LargeBinary, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, LargeBinary, SmallInteger, String
+from sqlalchemy import false as sa_false
 from sqlalchemy.dialects.postgresql import INET, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,13 +28,24 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = uuid_pk()
     # Phone: HMAC for lookup/uniqueness + AES-GCM ciphertext for display. Never plaintext.
-    phone_hash: Mapped[str] = mapped_column(String(64), unique=True)
-    phone_enc: Mapped[bytes] = mapped_column(LargeBinary)
+    # Members log in by phone. Staff (moderator/admin) accounts have no phone.
+    phone_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    phone_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     email_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
     email_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     role: Mapped[str] = mapped_column(String(20), default=UserRole.MEMBER)
+    # ---- staff-only login: email + password + TOTP ----
+    name: Mapped[str | None] = mapped_column(String(80))
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    totp_secret_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=sa_false()
+    )
+    failed_logins: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(20), default=UserStatus.ACTIVE)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at_col()
@@ -54,6 +66,9 @@ class RefreshToken(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # rotated | logout | reuse. Only "rotated" tokens get the multi-tab grace window.
     revoked_reason: Mapped[str | None] = mapped_column(String(20))
+    # "member" (phone OTP) or "admin" (staff login). Admin sessions also have a hard end.
+    scope: Mapped[str] = mapped_column(String(10), default="member", server_default="member")
+    session_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at_col()
 
 
