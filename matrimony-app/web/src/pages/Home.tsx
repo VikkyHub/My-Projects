@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BadgeCheck,
   Briefcase,
-  Camera,
   Check,
   Circle,
   Hash,
@@ -13,11 +12,12 @@ import {
   UserRound,
 } from "lucide-react";
 import { Navigate } from "react-router-dom";
-import { ApiError, api } from "../api/client";
+import { ApiError, api, mediaUrl } from "../api/client";
 import type { Career, Family, Horoscope, MyProfile } from "../api/types";
 import AppShell from "../components/AppShell";
 import ConsentCard from "../components/ConsentCard";
 import Section, { Facts } from "../components/Section";
+import PhotoManager, { usePhotos } from "../components/PhotoManager";
 import SideRail from "../components/SideRail";
 import { Badge, Card, Field, Input, ProgressRing, Select, Textarea, toNum, toStr } from "../components/ui";
 import {
@@ -59,7 +59,7 @@ const STATUS: Record<MyProfile["status"], { label: string; tone: "gray" | "green
 const lbl = <T extends Record<string, string>>(map: T, v: string | null | undefined) =>
   v ? (map as Record<string, string>)[v] : undefined;
 
-function checklist(p: MyProfile): [string, boolean][] {
+function checklist(p: MyProfile, photoCount: number): [string, boolean][] {
   return [
     ["Basic details", true],
     ["About me (50+ characters)", !!p.about_me && p.about_me.length >= 50],
@@ -67,7 +67,7 @@ function checklist(p: MyProfile): [string, boolean][] {
     ["Family details", !!(p.family?.father_occupation || p.family?.family_type)],
     ["Education", !!p.career?.education_level_id],
     ["Occupation & income", !!p.career?.occupation_id && p.career?.annual_income_band != null],
-    ["Photos", false],
+    ["Photos", photoCount > 0],
   ];
 }
 
@@ -83,6 +83,7 @@ export default function Home() {
   const tongues = useMotherTongues();
   const cities = useCities();
   const edu = useEducationLevels();
+  const photos = usePhotos();
   const occ = useOccupations();
 
   if (me.error instanceof ApiError && me.error.status === 404) return <Navigate to="/register" replace />;
@@ -104,7 +105,8 @@ export default function Home() {
   const p = me.data;
   const city = cities.data?.find((c) => c.id === p.city_id);
   const status = STATUS[p.status];
-  const items = checklist(p);
+  const items = checklist(p, photos.data?.length ?? 0);
+  const mainPhoto = photos.data?.find((x) => x.is_primary);
   const initials = `${p.first_name[0]}${p.last_name?.[0] ?? ""}`;
 
   return (
@@ -120,9 +122,17 @@ export default function Home() {
         <div className="flex flex-col gap-5 px-6 pb-6 sm:flex-row sm:items-end sm:px-8">
           <div className="relative z-10 -mt-14 shrink-0 sm:-mt-16">
             <div className="w-fit rounded-full bg-gradient-to-br from-gold-200 via-gold-400 to-brand-500 p-1 shadow-lg">
-              <div className="grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 font-display text-4xl font-semibold text-white ring-4 ring-white sm:h-32 sm:w-32">
-                {initials}
-              </div>
+              {mainPhoto ? (
+                <img
+                  src={mediaUrl(mainPhoto.url)}
+                  alt={p.first_name}
+                  className="h-28 w-28 rounded-full object-cover ring-4 ring-white sm:h-32 sm:w-32"
+                />
+              ) : (
+                <div className="grid h-28 w-28 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 font-display text-4xl font-semibold text-white ring-4 ring-white sm:h-32 sm:w-32">
+                  {initials}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex-1 pb-1 sm:pt-5">
@@ -196,29 +206,7 @@ export default function Home() {
         <div className="space-y-6">
           {p.candidate_consent_pending && <ConsentCard profile={p} />}
 
-          <Card>
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-rose-50 text-rose-500">
-                  <Camera className="h-5 w-5" />
-                </span>
-                <div>
-                  <h2 className="font-display text-lg font-semibold">Photos</h2>
-                  <p className="text-xs font-medium text-muted">Upload with privacy controls — coming next</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`grid aspect-[3/4] place-items-center rounded-2xl border-2 border-dashed border-brand-100 bg-brand-50/40 text-brand-300 ${i === 3 ? "hidden sm:grid" : ""}`}
-                >
-                  <Camera className="h-6 w-6" />
-                </div>
-              ))}
-            </div>
-          </Card>
+          <PhotoManager />
 
           <Section
             key={`basic-${p.religion_id}-${p.community_id}-${p.city_id}-${p.height_cm}`}

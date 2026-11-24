@@ -9,3 +9,7 @@ class Option(BaseModel):
 
 class CityOption(Option):
     state: str
+
+
+class EducationOption(Option):
+    rank: int

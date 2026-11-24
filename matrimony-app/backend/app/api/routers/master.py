@@ -15,7 +15,7 @@ from app.models import (
     State,
     SubCommunity,
 )
-from app.schemas.master import CityOption, Option
+from app.schemas.master import CityOption, EducationOption, Option
 
 router = APIRouter(prefix="/master", tags=["master data"])
 
@@ -74,7 +74,7 @@ async def cities(response: Response, db: AsyncSession = Depends(get_db)):
     return [CityOption(id=r.id, name=r.name, state=r.state) for r in rows]
 
 
-@router.get("/education-levels", response_model=list[Option])
+@router.get("/education-levels", response_model=list[EducationOption])
 async def education_levels(response: Response, db: AsyncSession = Depends(get_db)):
     response.headers["Cache-Control"] = CACHE
     rows = await db.scalars(

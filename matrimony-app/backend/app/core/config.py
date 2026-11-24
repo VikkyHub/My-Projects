@@ -37,6 +37,21 @@ class Settings(BaseSettings):
     OTP_MAX_SENDS_PER_PHONE_PER_HOUR: int = 3
     OTP_MAX_SENDS_PER_IP_PER_HOUR: int = 10
 
+    # DEV ONLY: new profiles and photos skip moderation (there's no admin panel yet).
+    DEV_AUTO_APPROVE: bool = False
+
+    # Business rules
+    CHAT_REQUIRES_PREMIUM: bool = True  # chat needs an accepted interest + one premium side
+    FREE_DAILY_INTERESTS: int = 5
+    PREMIUM_DAILY_INTERESTS: int = 50
+    MAX_PHOTOS: int = 6
+    MAX_PHOTO_BYTES: int = 10 * 1024 * 1024
+    PHOTO_URL_TTL_SECONDS: int = 600
+
+    # Photo storage. "local" writes to MEDIA_DIR (dev). R2/S3 backend comes with deployment.
+    STORAGE_BACKEND: Literal["local"] = "local"
+    MEDIA_DIR: str = "media"
+
     # DEV ONLY: every OTP is this code (e.g. "123456"). Forbidden outside ENV=dev.
     DEV_FIXED_OTP: str = ""
 
@@ -62,6 +77,8 @@ class Settings(BaseSettings):
                     or val == Settings.model_fields[name].default
                 ):
                     raise ValueError(f"{name} must be set to a real secret in prod")
+            if self.DEV_AUTO_APPROVE:
+                raise ValueError("DEV_AUTO_APPROVE must not be set in prod")
             if self.DEV_FIXED_OTP:
                 raise ValueError("DEV_FIXED_OTP must not be set in prod")
             if self.SMS_PROVIDER == "console":

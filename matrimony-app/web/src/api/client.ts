@@ -5,7 +5,20 @@
  *    so XSS can't read it — needs a cookie mode on the /auth endpoints)
  *  - on 401, refreshes once and retries; concurrent 401s share one refresh call
  */
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1";
+export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1";
+const API_ORIGIN = new URL(API_URL).origin;
+
+/** Backend returns signed media paths like /api/v1/media/...; make them absolute. */
+export function mediaUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  return path.startsWith("http") ? path : `${API_ORIGIN}${path}`;
+}
+
+export function wsUrl(ticket: string): string {
+  const u = new URL(API_URL);
+  u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+  return `${u.toString().replace(/\/$/, "")}/ws?ticket=${encodeURIComponent(ticket)}`;
+}
 const REFRESH_KEY = "rt";
 
 let accessToken: string | null = null;
@@ -64,9 +77,17 @@ function errorMessage(body: unknown, status: number): string {
   return `Request failed (${status})`;
 }
 
+const PUBLIC_AUTH = /^\/auth\/(otp\/|refresh|logout)/;
+
 export async function api<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+  // After a page reload the access token (memory only) is gone: renew it first instead of
+  // letting every request fail with 401. Concurrent callers share one refresh.
+  if (!accessToken && localStorage.getItem(REFRESH_KEY) && !PUBLIC_AUTH.test(path)) {
+    refreshing ??= refresh().finally(() => (refreshing = null));
+    await refreshing;
+  }
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
   const r = await fetch(`${API_URL}${path}`, { ...init, headers });

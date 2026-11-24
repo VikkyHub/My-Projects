@@ -4,8 +4,8 @@ Web-first matrimony platform for India. FastAPI backend, React web app, Flutter 
 
 | Folder | What | Status |
 |---|---|---|
-| `backend/` | FastAPI + PostgreSQL + Redis API | Auth, profiles, master data ✅ |
-| `web/` | React 19 + Vite + Tailwind | OTP login ✅ |
+| `backend/` | FastAPI + PostgreSQL + Redis API | Auth, profiles, photos, matching, interests, chat ✅ |
+| `web/` | React 19 + Vite + Tailwind | Login, registration, profile, matches, interests, messages ✅ |
 | `mobile/` | Flutter app | Starts mid-January |
 | `docs/` | Decisions, roadmap, schema | |
 
@@ -48,11 +48,16 @@ uv pip install -e ".[dev]"
 copy .env.example .env
 alembic upgrade head
 python -m scripts.seed_master
+python -m scripts.seed_profiles
 uvicorn app.main:app --reload
 ```
 - API docs: http://localhost:8000/docs
-- In dev, OTPs are **not sent by SMS**. They're printed in this window, like
-  `DEV OTP (not sent) code=123456`.
+- In dev, OTPs are **not sent by SMS**, and with the default `.env` every OTP is **123456**.
+- `seed_profiles` adds 60 sample members so Matches/Interests/Messages have people in them:
+  brides **9000000001–9000000030**, grooms **9000000031–9000000060** (OTP 123456).
+  Every 3rd one is Premium, so chat works with them.
+- `DEV_AUTO_APPROVE=true` makes new profiles and photos go live immediately (no admin panel yet).
+- Uploaded photos are stored in `backend/media/` in dev (git-ignored).
 
 **3. Web** (another PowerShell window):
 ```powershell
@@ -70,22 +75,18 @@ pytest
 ```
 
 ## API so far
+Full, live documentation: **http://localhost:8000/docs**
 
-| Method | Path | What it does |
-|---|---|---|
-| POST | `/api/v1/auth/otp/send` | Send login OTP (rate-limited: 30s cooldown, 3/hour per phone, 10/hour per IP) |
-| POST | `/api/v1/auth/otp/verify` | Verify OTP; creates account on first login; returns access + refresh tokens |
-| POST | `/api/v1/auth/refresh` | Rotate refresh token (reusing an old one logs out every session in that family) |
-| POST | `/api/v1/auth/logout` | Revoke refresh token |
-| GET | `/api/v1/master/religions` | Registration dropdowns… |
-| GET | `/api/v1/master/communities?religion_id=` | …community for that religion |
-| GET | `/api/v1/master/sub-communities?community_id=` | …sub-community |
-| GET | `/api/v1/master/mother-tongues` | |
-| POST | `/api/v1/profiles` | Create profile (self / parent / sibling / relative / friend) |
-| GET | `/api/v1/profiles/me` | My profile |
-| PATCH | `/api/v1/profiles/me` | Update basics + family / career / horoscope sections |
-| POST | `/api/v1/profiles/me/candidate-consent/send` | OTP to the **candidate's** phone when a relative created the profile |
-| POST | `/api/v1/profiles/me/candidate-consent/verify` | Candidate confirms → profile moves from `draft` to `pending_review` |
+| Area | Endpoints |
+|---|---|
+| Auth | `POST /auth/otp/send`, `/auth/otp/verify`, `/auth/refresh`, `/auth/logout`, `/auth/ws-ticket` |
+| Master data | `GET /master/religions`, `communities`, `sub-communities`, `mother-tongues`, `cities`, `states`, `education-levels`, `occupations` |
+| My profile | `POST /profiles`, `GET/PATCH /profiles/me`, candidate consent `send/verify`, `GET/PUT /profiles/me/preferences` |
+| Photos | `GET/POST /profiles/me/photos`, `DELETE /profiles/me/photos/{id}`, `POST …/{id}/primary`, `GET/PUT /profiles/me/photo-settings` |
+| Matches | `GET /matches?mode=recommended\|all&…filters&cursor=`, `GET /profiles/{public_id}` |
+| Shortlist / safety | `GET /shortlist`, `PUT/DELETE /shortlist/{public_id}`, `POST /profiles/{public_id}/block`, `POST /profiles/{public_id}/report` |
+| Interests | `POST /interests`, `GET /interests?box=received\|sent\|accepted`, `POST /interests/{id}/accept\|decline\|withdraw`, `GET /interests/counts` |
+| Chat | `GET /conversations`, `GET/POST /conversations/{id}/messages`, `POST /conversations/{id}/read`, `WS /ws?ticket=` |
 
 ## Rules already enforced in code
 - Phone numbers are stored **HMAC-hashed + AES-GCM encrypted**, never as plain text.
@@ -95,6 +96,14 @@ pytest
 - "About me" rejects phone numbers, emails, links and dowry terms.
 - The community must belong to the chosen religion. Changing the religion clears the community.
 - Every consent (terms, privacy, candidate consent) is logged with its version and IP for DPDP.
+- **Matching is two-way**: recommended profiles fit your preferences *and* you fit theirs.
+- Free members see only last-name initials, and get 5 interests a day (Premium: 50).
+- **Chat opens only after an interest is accepted and one side is Premium.** Messages mentioning
+  money, phone numbers, UPI IDs or links are flagged with a warning; dowry talk is rejected.
+- Block hides both people from each other everywhere and closes their chat. 3 reports from
+  different members auto-hide a profile pending review.
+- Photos: re-encoded to WebP (EXIF/GPS removed), served only via expiring signed links,
+  blurred for viewers your privacy setting excludes; duplicates of another member's photo are held for review.
 
 ## Database changes
 Edit models in `backend/app/models/`, then:

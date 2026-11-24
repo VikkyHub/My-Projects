@@ -33,6 +33,11 @@ class ProfileError(Exception):
         self.status_code = status_code
 
 
+def _after_consent_status() -> str:
+    """Moderation queue, or straight to live when DEV_AUTO_APPROVE is on (dev only)."""
+    return ProfileStatus.ACTIVE if settings.DEV_AUTO_APPROVE else ProfileStatus.PENDING_REVIEW
+
+
 def age_on(dob: date, today: date | None = None) -> int:
     today = today or date.today()
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
@@ -142,7 +147,7 @@ async def create_profile(
         candidate_phone_enc=cand_enc,
         # Profile stays hidden (draft) until the candidate personally consents.
         candidate_consent_at=now if is_self else None,
-        status=ProfileStatus.PENDING_REVIEW if is_self else ProfileStatus.DRAFT,
+        status=(_after_consent_status() if is_self else ProfileStatus.DRAFT),
         first_name=data.first_name,
         last_name=data.last_name,
         gender=data.gender,
@@ -262,16 +267,30 @@ async def update_profile(db: AsyncSession, profile: Profile, data: ProfileUpdate
         for k, v in values.items():
             setattr(section, k, v)
 
-    profile.completeness = compute_completeness(profile)
+    profile.completeness = compute_completeness(profile, await photo_count(db, profile.id))
     await db.commit()
     await db.refresh(profile)
     return profile
 
 
+async def photo_count(db: AsyncSession, profile_id) -> int:
+    from sqlalchemy import func
+
+    from app.models import Photo
+
+    return (
+        await db.scalar(
+            select(func.count())
+            .select_from(Photo)
+            .where(Photo.profile_id == profile_id, Photo.status != "rejected")
+        )
+    ) or 0
+
+
 async def confirm_candidate_consent(db: AsyncSession, profile: Profile, ip: str | None) -> None:
     profile.candidate_consent_at = datetime.now(UTC)
     if profile.status == ProfileStatus.DRAFT:
-        profile.status = ProfileStatus.PENDING_REVIEW
+        profile.status = _after_consent_status()
     db.add(
         Consent(
             user_id=profile.user_id,

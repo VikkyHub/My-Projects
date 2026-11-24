@@ -28,3 +28,6 @@ Thumbs.db
 # Redis snapshots
 *.rdb
 *.tsbuildinfo
+
+# Uploaded photos (local dev storage)
+backend/media/

@@ -90,3 +90,123 @@ export interface MyProfile {
   horoscope: Horoscope | null;
   created_at: string;
 }
+
+// ---------- social ----------
+export interface InterestRef {
+  id: string;
+  status: "pending" | "accepted" | "declined" | "withdrawn";
+  direction: "sent" | "received";
+}
+
+export interface ProfileCard {
+  public_id: string;
+  name: string;
+  first_name: string;
+  gender: Gender;
+  age: number;
+  height_cm: number | null;
+  marital_status: MaritalStatus;
+  religion: string | null;
+  community: string | null;
+  mother_tongue: string | null;
+  city: string | null;
+  state: string | null;
+  education: string | null;
+  occupation: string | null;
+  about: string | null;
+  is_premium: boolean;
+  created_by: CreatedBy;
+  last_active: string | null;
+  photo_url: string | null;
+  photo_locked: boolean;
+  match_score: number | null;
+  match_reasons: string[];
+  interest: InterestRef | null;
+  conversation_id: string | null;
+  shortlisted: boolean;
+}
+
+export interface MatchPage {
+  items: ProfileCard[];
+  next_cursor: string | null;
+}
+
+export interface PublicProfile extends ProfileCard {
+  about_full: string | null;
+  photos: string[];
+  family: Partial<Family> | null;
+  career: {
+    education: string | null;
+    education_detail: string | null;
+    college: string | null;
+    occupation: string | null;
+    employed_in: string | null;
+    annual_income_band: number | null;
+  } | null;
+  horoscope: Partial<Horoscope> | null;
+  horoscope_locked: boolean;
+  diet: string | null;
+  smoke: string | null;
+  drink: string | null;
+  has_children: boolean | null;
+}
+
+export interface Preferences {
+  age_min: number | null;
+  age_max: number | null;
+  height_min_cm: number | null;
+  height_max_cm: number | null;
+  marital_statuses: MaritalStatus[] | null;
+  religion_ids: number[] | null;
+  community_ids: number[] | null;
+  mother_tongue_ids: number[] | null;
+  state_ids: number[] | null;
+  min_education_rank: number | null;
+  min_income_band: number | null;
+  diets: string[] | null;
+}
+
+export interface InterestItem {
+  id: string;
+  status: InterestRef["status"];
+  direction: "sent" | "received";
+  note: string | null;
+  created_at: string;
+  responded_at: string | null;
+  profile: ProfileCard;
+}
+
+export interface Counts {
+  received_pending: number;
+  unread_messages: number;
+  sent_today: number;
+  daily_limit: number;
+}
+
+export interface Conversation {
+  id: string;
+  profile: ProfileCard;
+  last_message: string | null;
+  last_message_at: string | null;
+  last_from_me: boolean;
+  unread: number;
+  can_chat: boolean;
+  blocked_reason: "premium_required" | "closed" | null;
+}
+
+export interface Message {
+  id: number;
+  conversation_id: string;
+  sender_public_id: string;
+  body: string;
+  flagged: boolean;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface Photo {
+  id: string;
+  url: string;
+  status: "pending" | "approved" | "rejected";
+  is_primary: boolean;
+}

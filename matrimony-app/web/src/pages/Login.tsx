@@ -40,7 +40,7 @@ export default function Login() {
       api<LoginResponse>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone, code }) }),
     onSuccess: (r) => {
       setTokens(r);
-      navigate(r.has_profile ? "/" : "/register", { replace: true });
+      navigate(r.has_profile ? "/matches" : "/register", { replace: true });
     },
   });
 

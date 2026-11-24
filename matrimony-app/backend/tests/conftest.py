@@ -10,6 +10,7 @@ os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = os.getenv(
     "TEST_DATABASE_URL", "postgresql+asyncpg://matri:matri@localhost:55432/matrimony_test"
 )
+os.environ["OTP_MAX_SENDS_PER_IP_PER_HOUR"] = "10000"  # tests log in many members
 os.environ["REDIS_URL"] = os.getenv("TEST_REDIS_URL", "redis://localhost:6379/15")
 
 import pytest  # noqa: E402
@@ -63,7 +64,12 @@ async def _schema():
 async def _clean():
     yield
     async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE users, consents, refresh_tokens, profiles CASCADE"))
+        await conn.execute(
+            text(
+                "TRUNCATE users, consents, refresh_tokens, profiles, photos, interests, "
+                "conversations, messages, blocks, shortlists, reports, profile_views CASCADE"
+            )
+        )
     await get_redis().flushdb()
 
 

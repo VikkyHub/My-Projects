@@ -2,13 +2,16 @@ import { Heart, LogOut, MessageCircle, Send, Sparkles, UserRound, type LucideIco
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logout } from "../api/client";
+import { useRealtime } from "../lib/realtime";
+import { useCounts } from "../lib/social";
 import { cx } from "./ui";
 
-const NAV: { to: string; label: string; icon: LucideIcon; ready: boolean }[] = [
+type Badge = "interests" | "messages";
+const NAV: { to: string; label: string; icon: LucideIcon; ready: boolean; badge?: Badge }[] = [
+  { to: "/matches", label: "Matches", icon: Sparkles, ready: true },
+  { to: "/interests", label: "Interests", icon: Send, ready: true, badge: "interests" },
+  { to: "/messages", label: "Messages", icon: MessageCircle, ready: true, badge: "messages" },
   { to: "/", label: "My Profile", icon: UserRound, ready: true },
-  { to: "/matches", label: "Matches", icon: Sparkles, ready: false },
-  { to: "/interests", label: "Interests", icon: Send, ready: false },
-  { to: "/messages", label: "Messages", icon: MessageCircle, ready: false },
 ];
 
 export function Logo({ light = false }: { light?: boolean }) {
@@ -29,8 +32,18 @@ export function Logo({ light = false }: { light?: boolean }) {
   );
 }
 
-function NavItem({ n, mobile = false }: { n: (typeof NAV)[number]; mobile?: boolean }) {
+function NavItem({ n, mobile = false, count = 0 }: { n: (typeof NAV)[number]; mobile?: boolean; count?: number }) {
   const Icon = n.icon;
+  const dot = count > 0 && (
+    <span
+      className={cx(
+        "grid min-w-5 place-items-center rounded-full bg-brand-600 px-1.5 text-[10px] font-bold leading-5 text-white ring-2 ring-white",
+        mobile && "absolute -top-1 left-1/2 ml-1.5",
+      )}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
   if (!n.ready) {
     return (
       <span
@@ -53,10 +66,10 @@ function NavItem({ n, mobile = false }: { n: (typeof NAV)[number]; mobile?: bool
   return (
     <NavLink
       to={n.to}
-      end
+      end={n.to === "/"}
       className={({ isActive }) =>
         cx(
-          "flex items-center transition",
+          "relative flex items-center transition",
           mobile ? "flex-1 flex-col gap-1 py-2 text-[11px] font-semibold" : "gap-2 rounded-full px-4 py-2 text-sm font-semibold",
           isActive
             ? mobile
@@ -68,20 +81,27 @@ function NavItem({ n, mobile = false }: { n: (typeof NAV)[number]; mobile?: bool
     >
       <Icon className="h-5 w-5" />
       {n.label}
+      {dot}
     </NavLink>
   );
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  useRealtime();
+  const counts = useCounts();
+  const countFor = (b?: Badge) =>
+    b === "interests" ? counts.data?.received_pending : b === "messages" ? counts.data?.unread_messages : 0;
   return (
     <div className="pattern-soft min-h-screen pb-20 md:pb-0">
       <header className="sticky top-0 z-20 border-b border-line/70 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl 2xl:max-w-[1440px] sm:px-6 items-center gap-6 px-4 py-3">
-          <Logo />
+          <NavLink to="/matches" aria-label="Home">
+            <Logo />
+          </NavLink>
           <nav className="hidden flex-1 items-center gap-1 md:flex">
             {NAV.map((n) => (
-              <NavItem key={n.to} n={n} />
+              <NavItem key={n.to} n={n} count={countFor(n.badge)} />
             ))}
           </nav>
           <button
@@ -102,7 +122,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         {NAV.map((n) => (
-          <NavItem key={n.to} n={n} mobile />
+          <NavItem key={n.to} n={n} mobile count={countFor(n.badge)} />
         ))}
       </nav>
     </div>
