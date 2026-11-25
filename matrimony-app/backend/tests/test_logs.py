@@ -141,3 +141,51 @@ async def test_retention_purge():
         await db.commit()
     assert await purge_old_events() == 1
     assert [e.event for e in await events()] == ["new"]
+
+
+async def test_logging_failure_never_breaks_the_app(monkeypatch):
+    """If the log table is missing or the DB is down, record_event must just carry on."""
+    from app.services import events as ev
+
+    class Broken:
+        async def __aenter__(self):
+            raise RuntimeError('relation "app_events" does not exist')
+
+        async def __aexit__(self, *a):
+            return False
+
+    monkeypatch.setattr(ev, "SessionLocal", lambda: Broken())
+    await ev.record_event("app_started", category="system", level="error", message="x")  # no raise
+
+
+async def test_api_starts_even_if_log_table_missing(monkeypatch):
+    """Startup must not fail because of logging (regression: crash in the error path)."""
+    from app.core.config import settings
+    from app.main import app, lifespan
+    from app.services import events as ev
+
+    class Broken:
+        async def __aenter__(self):
+            raise RuntimeError('relation "app_events" does not exist')
+
+        async def __aexit__(self, *a):
+            return False
+
+    monkeypatch.setattr(ev, "SessionLocal", lambda: Broken())
+    monkeypatch.setattr(settings, "ENV", "dev")
+    import app.main as main_mod
+
+    async def no_purge():
+        return None
+
+    monkeypatch.setattr(main_mod, "purge_loop", no_purge)
+    monkeypatch.setattr(
+        main_mod, "engine", type("E", (), {"dispose": staticmethod(lambda: _noop())})()
+    )
+    monkeypatch.setattr(main_mod, "close_redis", _noop)
+    async with lifespan(app):
+        pass
+
+
+async def _noop():
+    return None

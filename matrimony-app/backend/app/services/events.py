@@ -61,7 +61,8 @@ async def record_event(
             )
             await s.commit()
     except Exception as e:  # never let logging break the app
-        log.error("app_event_write_failed", error=str(e)[:200], event=event)
+        # NB: structlog reserves the keyword "event" for the message itself
+        log.error("app_event_write_failed", error=str(e)[:200], event_name=event)
 
 
 async def purge_old_events() -> int:
