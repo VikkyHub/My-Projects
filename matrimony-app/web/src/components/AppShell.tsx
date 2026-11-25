@@ -1,7 +1,8 @@
 import { Heart, LifeBuoy, LogOut, MessageCircle, Send, Sparkles, UserRound, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { logout } from "../api/client";
+import FloatingHelp from "./FloatingHelp";
 import { useRealtime } from "../lib/realtime";
 import { useCounts } from "../lib/social";
 import { cx } from "./ui";
@@ -89,6 +90,7 @@ function NavItem({ n, mobile = false, count = 0 }: { n: (typeof NAV)[number]; mo
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   useRealtime();
   const counts = useCounts();
   const countFor = (b?: Badge) =>
@@ -119,6 +121,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto max-w-7xl 2xl:max-w-[1440px] sm:px-6 px-4 py-6 sm:py-8">{children}</main>
+
+      {/* Help shortcut on every page (not on the Help page itself) */}
+      {pathname !== "/help" && <FloatingHelp />}
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
