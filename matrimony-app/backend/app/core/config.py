@@ -29,6 +29,20 @@ class Settings(BaseSettings):
     # Application log (admin panel) — rows older than this are deleted automatically
     APP_LOG_RETENTION_DAYS: int = 90
 
+    # Conduct: N blocked messages within the window -> member chat muted
+    CONDUCT_MUTE_AFTER: int = 3
+    CONDUCT_WINDOW_DAYS: int = 7
+    CONDUCT_MUTE_HOURS: int = 24
+
+    # Help chat attachments
+    VOICE_MAX_BYTES: int = 2 * 1024 * 1024
+    VOICE_MAX_SECONDS: int = 120
+
+    # Server-side translation fallback (browsers with built-in translation don't need it).
+    # "none" = disabled; "google" needs GOOGLE_TRANSLATE_API_KEY (Cloud Translation v2).
+    TRANSLATE_PROVIDER: Literal["none", "google"] = "none"
+    GOOGLE_TRANSLATE_API_KEY: str = ""
+
     # Staff (admin panel) sessions
     ADMIN_IDLE_MINUTES: int = 30
     ADMIN_SESSION_HOURS: int = 8

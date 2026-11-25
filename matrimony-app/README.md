@@ -74,6 +74,27 @@ cd backend
 pytest
 ```
 
+## Help chat, translation & conduct rules
+
+**Help** (in the member menu): an assistant answers common questions instantly (OTP, photos,
+review, matches, interests, chat, premium, safety, blocking…, English + Hinglish). Unknown
+questions, "Talk to a person", a 👎 on an answer, payments/refunds, account deletion, photos and
+voice notes, and urgent words (threats, blackmail…) go to the **Support inbox** in the admin panel.
+Staff replies appear in the member's chat instantly. Assistant topics live in
+`backend/app/services/helpbot.py` — add an `Intent` to teach it something new.
+
+**Translate**: any received message (help chat, member chat, support inbox) can be translated
+into 11 languages. In Chrome it runs **on-device** (built-in Translator API — the text never
+leaves the computer). Other browsers fall back to the server only if
+`TRANSLATE_PROVIDER=google` + `GOOGLE_TRANSLATE_API_KEY` are set.
+
+**Conduct rules**: vulgar/abusive language (English, Hinglish, Hindi/Telugu/Tamil/Kannada…, incl.
+disguised spellings like `f*ck`, `f.u.c.k`) is blocked in member chat, help chat, interest notes
+and "About me". Each block is a recorded violation (the text itself is never stored);
+**3 within 7 days mute member chat for 24 hours** (help chat stays open). Tune with
+`CONDUCT_MUTE_AFTER`, `CONDUCT_WINDOW_DAYS`, `CONDUCT_MUTE_HOURS`; word lists are in
+`backend/app/services/conduct.py`.
+
 ## Admin panel
 
 Staff use a **separate login** at **http://localhost:5173/admin/login**: work email + password +
@@ -121,9 +142,10 @@ Full, live documentation: **http://localhost:8000/docs**
 | Matches | `GET /matches?mode=recommended\|all&…filters&cursor=`, `GET /profiles/{public_id}` |
 | Shortlist / safety | `GET /shortlist`, `PUT/DELETE /shortlist/{public_id}`, `POST /profiles/{public_id}/block`, `POST /profiles/{public_id}/report` |
 | Interests | `POST /interests`, `GET /interests?box=received\|sent\|accepted`, `POST /interests/{id}/accept\|decline\|withdraw`, `GET /interests/counts` |
+| Help chat | `GET /support`, `POST /support/messages`, `POST /support/attachments` (photo / voice), `POST /support/escalate`, `POST /support/feedback`, `POST /support/close`, `POST /translate` |
 | Chat | `GET /conversations`, `GET/POST /conversations/{id}/messages`, `POST /conversations/{id}/read`, `WS /ws?ticket=` |
 | Staff auth | `POST /admin/auth/login`, `POST /admin/auth/verify`, `GET /admin/auth/me` |
-| Admin | `GET /admin/stats`, `GET /admin/profiles`, `GET /admin/profiles/{id}`, `POST …/moderate`, `POST …/reveal-phone`, `GET /admin/photos`, `POST /admin/photos/{id}/moderate`, `GET /admin/reports`, `POST /admin/reports/{id}/resolve`, `GET /admin/audit`, `GET /admin/logs`, `GET /admin/logs/summary`, `GET/POST /admin/staff`, `POST /admin/staff/{id}/disable\|enable\|reset` |
+| Admin | `GET /admin/stats`, `GET /admin/profiles`, `GET /admin/profiles/{id}`, `POST …/moderate`, `POST …/reveal-phone`, `GET /admin/photos`, `POST /admin/photos/{id}/moderate`, `GET /admin/reports`, `POST /admin/reports/{id}/resolve`, `GET /admin/audit`, `GET /admin/logs`, `GET /admin/logs/summary`, `GET /admin/support`, `GET /admin/support/{id}`, `POST /admin/support/{id}/reply\|close`, `GET/POST /admin/staff`, `POST /admin/staff/{id}/disable\|enable\|reset` |
 
 ## Rules already enforced in code
 - Phone numbers are stored **HMAC-hashed + AES-GCM encrypted**, never as plain text.

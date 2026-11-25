@@ -33,6 +33,7 @@ from app.models.profile import (
     ProfileHoroscope,
     Verification,
 )
+from app.models.support import ConductViolation, SupportMessage, SupportTicket
 from app.models.user import AdminAction, Consent, Device, RefreshToken, User
 
 __all__ = [
@@ -41,6 +42,7 @@ __all__ = [
     "Block",
     "City",
     "Community",
+    "ConductViolation",
     "Consent",
     "ContactUnlock",
     "Conversation",
@@ -69,6 +71,8 @@ __all__ = [
     "State",
     "SubCommunity",
     "Subscription",
+    "SupportMessage",
+    "SupportTicket",
     "User",
     "Verification",
 ]

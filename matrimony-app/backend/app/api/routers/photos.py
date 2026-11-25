@@ -16,6 +16,13 @@ from app.services.social import photo_keys
 from app.services.storage import get_storage, verify_signature
 
 router = APIRouter(tags=["photos"])
+MEDIA_TYPES = {
+    "webp": "image/webp",
+    "webm": "audio/webm",
+    "ogg": "audio/ogg",
+    "m4a": "audio/mp4",
+    "mp3": "audio/mpeg",
+}
 
 
 async def _me(db: AsyncSession, user: User) -> Profile:
@@ -178,8 +185,9 @@ async def media(key: str, exp: int, sig: str):
     data = get_storage().read(key)
     if data is None:
         raise HTTPException(404, "Not found")
+    ext = key.rsplit(".", 1)[-1].lower()
     return Response(
         data,
-        media_type="image/webp",
+        media_type=MEDIA_TYPES.get(ext, "application/octet-stream"),
         headers={"Cache-Control": "private, max-age=600", "X-Content-Type-Options": "nosniff"},
     )

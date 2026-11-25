@@ -41,6 +41,7 @@ export function useRealtime() {
             qc.invalidateQueries({ queryKey: ["conversations"] });
             qc.invalidateQueries({ queryKey: ["counts"] });
           }
+          if (ev.type === "support") qc.invalidateQueries({ queryKey: ["support"] });
           if (ev.type === "read") {
             qc.invalidateQueries({ queryKey: ["conversations"] });
             qc.invalidateQueries({ queryKey: ["counts"] });

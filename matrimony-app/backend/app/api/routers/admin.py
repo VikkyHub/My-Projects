@@ -27,6 +27,7 @@ from app.models import (
     Profile,
     RefreshToken,
     Report,
+    SupportTicket,
     User,
 )
 from app.models.profile import ProfileStatus
@@ -111,6 +112,11 @@ async def stats(_: User = Depends(current_staff), db: AsyncSession = Depends(get
         ),
         interests_today=await n(
             select(func.count()).select_from(Interest).where(Interest.created_at >= today)
+        ),
+        support_waiting=await n(
+            select(func.count())
+            .select_from(SupportTicket)
+            .where(SupportTicket.status == "waiting_team")
         ),
         messages_today=await n(
             select(func.count()).select_from(Message).where(Message.created_at >= today)
@@ -723,7 +729,7 @@ FAILED_LOGIN_EVENTS = ("otp_failed", "staff_login_failed", "staff_2fa_failed")
 async def app_logs(
     level: str | None = Query(None, pattern="^(info|warning|error)$"),
     category: str | None = Query(
-        None, pattern="^(auth|staff|profile|photo|interest|chat|safety|system)$"
+        None, pattern="^(auth|staff|profile|photo|interest|chat|safety|support|system)$"
     ),
     actor: str | None = Query(None, max_length=120),
     q: str | None = Query(None, max_length=80),

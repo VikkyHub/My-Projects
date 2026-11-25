@@ -16,6 +16,7 @@ export interface Stats {
   premium_members: number;
   interests_today: number;
   messages_today: number;
+  support_waiting: number;
 }
 
 export interface ProfileRow {

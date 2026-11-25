@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models import Conversation, Interest, Message, Profile, User
 from app.schemas.social import InterestCounts, InterestCreate, InterestItem
+from app.services.conduct import VULGAR_MESSAGE, check_text, record_violation
 from app.services.events import record_event
 from app.services.realtime import publish
 from app.services.social import (
@@ -49,6 +50,18 @@ async def send_interest(
 ):
     me = await get_viewer(db, user)
     require_active(me, "send interests")
+    if body.note and not (v := check_text(body.note)).ok:
+        await record_violation(db, user, "interest", v.rule)
+        await record_event(
+            "vulgar_language_blocked",
+            category="safety",
+            level="warning",
+            actor=me.public_id,
+            actor_type="member",
+            request=request,
+            message="Blocked in interest note",
+        )
+        raise HTTPException(422, VULGAR_MESSAGE)
     t = await get_target(db, me, body.public_id)
     if t.id == me.id:
         raise HTTPException(422, "You can't send interest to yourself")

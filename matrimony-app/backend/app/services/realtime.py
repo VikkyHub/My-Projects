@@ -14,6 +14,15 @@ def channel(profile_id: uuid.UUID | str) -> str:
     return f"user:{profile_id}"
 
 
+def account_channel(user_id: uuid.UUID | str) -> str:
+    """Per-login-account channel (works before a profile exists: help chat)."""
+    return f"acct:{user_id}"
+
+
+async def publish_account(user_id: uuid.UUID | str, event: dict) -> None:
+    await get_redis().publish(account_channel(user_id), json.dumps(event, default=str))
+
+
 async def publish(profile_id: uuid.UUID | str, event: dict) -> None:
     await get_redis().publish(channel(profile_id), json.dumps(event, default=str))
 

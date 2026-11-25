@@ -30,6 +30,7 @@ const CATEGORIES = [
   { value: "interest", label: "Interests" },
   { value: "chat", label: "Chat" },
   { value: "safety", label: "Safety" },
+  { value: "support", label: "Help desk" },
   { value: "system", label: "System" },
 ];
 
@@ -62,6 +63,10 @@ const EVENT_LABEL: Record<string, string> = {
   member_blocked: "Member blocked someone",
   profile_auto_hidden: "Profile auto-hidden",
   server_error: "Server error",
+  vulgar_language_blocked: "Vulgar language blocked",
+  member_muted: "Member chat muted",
+  support_escalated: "Help request to team",
+  support_replied: "Team replied to help request",
   app_started: "API started",
 };
 

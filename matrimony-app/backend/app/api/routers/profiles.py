@@ -17,6 +17,7 @@ from app.schemas.profile import (
 )
 from app.services import otp
 from app.services import profiles as svc
+from app.services.conduct import VULGAR_MESSAGE, check_text, record_violation
 from app.services.events import record_event
 from app.services.sms import SmsProvider, get_sms_provider
 
@@ -77,6 +78,17 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     p = await _my_profile(user, db)
+    if body.about_me and not (v := check_text(body.about_me)).ok:
+        await record_violation(db, user, "profile", v.rule)
+        await record_event(
+            "vulgar_language_blocked",
+            category="safety",
+            level="warning",
+            actor=p.public_id,
+            actor_type="member",
+            message="Blocked in About me",
+        )
+        raise HTTPException(422, VULGAR_MESSAGE)
     try:
         p = await svc.update_profile(db, p, body)
     except svc.ProfileError as e:

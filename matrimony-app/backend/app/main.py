@@ -17,6 +17,7 @@ from app.api.routers import (
     matches,
     photos,
     profiles,
+    support,
 )
 from app.core.config import settings
 from app.core.redis import close_redis, get_redis
@@ -115,6 +116,7 @@ for r in (
     chat.router,
     admin_auth.router,
     admin.router,
+    support.router,
 ):
     app.include_router(r, prefix=settings.API_PREFIX)
 

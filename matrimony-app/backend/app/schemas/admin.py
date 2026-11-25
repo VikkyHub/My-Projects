@@ -60,6 +60,7 @@ class Stats(BaseModel):
     premium_members: int
     interests_today: int
     messages_today: int
+    support_waiting: int
 
 
 class ProfileRow(BaseModel):

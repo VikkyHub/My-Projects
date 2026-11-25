@@ -211,3 +211,24 @@ export interface Photo {
   status: "pending" | "approved" | "rejected";
   is_primary: boolean;
 }
+
+// ---------- help chat ----------
+export interface SupportMsg {
+  id: number;
+  sender: "member" | "bot" | "staff";
+  staff_name: string | null;
+  kind: "text" | "photo" | "voice";
+  body: string | null;
+  media_url: string | null;
+  duration_s: number | null;
+  meta: { intent?: string | null; suggestions?: { key: string; title: string }[]; ask_feedback?: boolean; helpful?: boolean } | null;
+  created_at: string;
+}
+
+export interface SupportView {
+  ticket: { id: string; status: "bot" | "waiting_team" | "answered" | "closed"; subject: string | null; created_at: string; escalated_at: string | null } | null;
+  messages: SupportMsg[];
+  welcome: string;
+  suggestions: { key: string; title: string }[];
+  chat_muted_until: string | null;
+}

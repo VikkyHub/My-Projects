@@ -20,7 +20,9 @@ from app.models import AppEvent
 log = structlog.get_logger("app")
 
 Level = Literal["info", "warning", "error"]
-Category = Literal["auth", "staff", "profile", "photo", "interest", "chat", "safety", "system"]
+Category = Literal[
+    "auth", "staff", "profile", "photo", "interest", "chat", "safety", "support", "system"
+]
 
 
 def _ip(request: Request | None) -> str | None:

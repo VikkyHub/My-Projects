@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Crown, Flag, Heart, Image, MessageCircle, Sparkles, UserCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, Crown, Flag, Heart, Image, LifeBuoy, MessageCircle, Sparkles, UserCheck, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { IconChip, type ChipColor } from "../components/ui";
 import AdminLayout from "./AdminLayout";
@@ -50,10 +50,11 @@ export default function Dashboard() {
     <AdminLayout>
       <PageHead title={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, ${me.data?.name?.split(" ")[0] ?? ""}`} sub="Here's what needs attention today." />
 
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
         <Queue to="/admin/profiles?status=pending_review" icon={UserCheck} label="Profiles to review" count={d?.profiles_pending} text="Oldest first — approve or ask for changes" />
         <Queue to="/admin/photos" icon={Image} label="Photos to review" count={d?.photos_pending} text="Check for real, appropriate photos" />
         <Queue to="/admin/reports" icon={Flag} label="Open reports" count={d?.reports_open} text="Safety first — handle these quickly" />
+        <Queue to="/admin/support" icon={LifeBuoy} label="Help requests" count={d?.support_waiting} text="Members waiting for a person" />
       </div>
 
       <h2 className="mb-4 mt-10 font-display text-xl font-semibold">Members</h2>

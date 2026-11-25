@@ -66,7 +66,8 @@ async def _clean():
     async with engine.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE users, admin_actions, app_events, consents, refresh_tokens, profiles, "
+                "TRUNCATE users, admin_actions, app_events, support_messages, support_tickets, "
+                "conduct_violations, consents, refresh_tokens, profiles, "
                 "photos, "
                 "interests, "
                 "conversations, messages, blocks, shortlists, reports, profile_views CASCADE"

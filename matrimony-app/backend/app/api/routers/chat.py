@@ -2,7 +2,7 @@ import asyncio
 import json
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 
 from fastapi import (
     APIRouter,
@@ -23,12 +23,14 @@ from app.db.session import SessionLocal, get_db
 from app.models import Conversation, Message, Profile, User
 from app.models.user import UserStatus
 from app.schemas.social import ConversationItem, MessageIn, MessageOut
+from app.services.conduct import VULGAR_MESSAGE, check_text, record_violation
 from app.services.events import record_event
 from app.services.rate_limit import hit
-from app.services.realtime import channel, issue_ticket, publish, redeem_ticket
+from app.services.realtime import account_channel, channel, issue_ticket, publish, redeem_ticket
 from app.services.social import build_cards, get_viewer, is_blocked
 
 router = APIRouter(tags=["chat"])
+IST_TZ = timezone(timedelta(hours=5, minutes=30))
 
 # Delivered, but flagged for moderators and shown with a safety warning to the receiver.
 _FLAG = [
@@ -180,6 +182,42 @@ async def send_message(
     text = body.body.strip()
     if not text:
         raise HTTPException(422, "Message is empty")
+    now = datetime.now(UTC)
+    if user.chat_muted_until and user.chat_muted_until > now:
+        until = user.chat_muted_until.astimezone(IST_TZ).strftime("%d %b, %I:%M %p")
+        raise HTTPException(
+            403, f"You can't send messages until {until} because of repeated language violations."
+        )
+    verdict = check_text(text)
+    if not verdict.ok:
+        muted = await record_violation(db, user, "chat", verdict.rule)
+        await record_event(
+            "vulgar_language_blocked",
+            category="safety",
+            level="warning",
+            actor=me.public_id,
+            actor_type="member",
+            request=request,
+            message="Blocked in member chat (text not stored)",
+            meta={"conversation_id": str(conv.id)},
+        )
+        if muted:
+            await record_event(
+                "member_muted",
+                category="safety",
+                level="error",
+                actor=me.public_id,
+                actor_type="member",
+                request=request,
+                message=f"Chat muted for {settings.CONDUCT_MUTE_HOURS}h after "
+                f"{settings.CONDUCT_MUTE_AFTER} violations",
+            )
+            raise HTTPException(
+                403,
+                f"{VULGAR_MESSAGE} You've been restricted from sending "
+                f"messages for {settings.CONDUCT_MUTE_HOURS} hours.",
+            )
+        raise HTTPException(422, VULGAR_MESSAGE)
     if _BLOCK.search(text):
         await record_event(
             "message_blocked",
@@ -265,13 +303,14 @@ async def ws(websocket: WebSocket, ticket: str):
         profile = (
             await db.scalar(select(Profile).where(Profile.user_id == user.id)) if user else None
         )
-    if user is None or user.status != UserStatus.ACTIVE or profile is None:
+    if user is None or user.status != UserStatus.ACTIVE:
         await websocket.close(code=4403)
         return
 
     await websocket.accept()
     pubsub = get_redis().pubsub()
-    await pubsub.subscribe(channel(profile.id))
+    channels = [account_channel(user.id)] + ([channel(profile.id)] if profile else [])
+    await pubsub.subscribe(*channels)
 
     async def pump():
         while True:

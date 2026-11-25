@@ -4,11 +4,13 @@ import AdminLogin from "./admin/AdminLogin";
 import AuditPage from "./admin/AuditPage";
 import Dashboard from "./admin/Dashboard";
 import LogsPage from "./admin/LogsPage";
+import SupportPage from "./admin/SupportPage";
 import PhotosPage from "./admin/PhotosPage";
 import ProfileDetailPage from "./admin/ProfileDetailPage";
 import ProfilesPage from "./admin/ProfilesPage";
 import ReportsPage from "./admin/ReportsPage";
 import StaffPage from "./admin/StaffPage";
+import Help from "./pages/Help";
 import Home from "./pages/Home";
 import Interests from "./pages/Interests";
 import Matches from "./pages/Matches";
@@ -31,6 +33,7 @@ export default function App() {
       <Route path="/p/:publicId" element={<RequireAuth><ProfileView /></RequireAuth>} />
       <Route path="/interests" element={<RequireAuth><Interests /></RequireAuth>} />
       <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
+      <Route path="/help" element={<RequireAuth><Help /></RequireAuth>} />
       <Route path="/messages/:convId" element={<RequireAuth><Messages /></RequireAuth>} />
       {/* Staff area: separate login + session (see api/client.ts) */}
       <Route path="/admin/login" element={<AdminLogin />} />
@@ -42,6 +45,7 @@ export default function App() {
       <Route path="/admin/audit" element={<AuditPage />} />
       <Route path="/admin/staff" element={<StaffPage />} />
       <Route path="/admin/logs" element={<LogsPage />} />
+      <Route path="/admin/support" element={<SupportPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

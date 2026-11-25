@@ -10,6 +10,7 @@ import { Empty } from "../components/Kit";
 import { Button, cx } from "../components/ui";
 import { onMessage } from "../lib/realtime";
 import { timeAgo } from "../lib/social";
+import { LanguagePicker, TranslateButton } from "../components/Translatable";
 import { ReportModal } from "./ProfileView";
 
 export default function Messages() {
@@ -162,6 +163,7 @@ function Thread({ conv, myId }: { conv: Conversation; myId: string }) {
             <p className="truncate text-xs text-muted">{p.last_active ?? [p.age + " yrs", p.city].filter(Boolean).join(" · ")}</p>
           </div>
         </Link>
+        <span className="hidden sm:block"><LanguagePicker /></span>
         <Button variant="ghost" size="sm" onClick={() => setReporting(true)} aria-label="Report">
           <Flag className="h-4 w-4" />
         </Button>
@@ -187,6 +189,7 @@ function Thread({ conv, myId }: { conv: Conversation; myId: string }) {
                   )}
                 >
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                  {!mine && <TranslateButton text={m.body} />}
                   <p className={cx("mt-1 flex items-center justify-end gap-1 text-[11px]", mine ? "text-white/70" : "text-muted")}>
                     {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
                     {mine && (m.read_at ? <CheckCheck className="h-3.5 w-3.5 text-gold-200" /> : <Check className="h-3.5 w-3.5" />)}

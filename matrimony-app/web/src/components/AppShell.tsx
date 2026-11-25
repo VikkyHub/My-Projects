@@ -1,4 +1,4 @@
-import { Heart, LogOut, MessageCircle, Send, Sparkles, UserRound, type LucideIcon } from "lucide-react";
+import { Heart, LifeBuoy, LogOut, MessageCircle, Send, Sparkles, UserRound, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logout } from "../api/client";
@@ -12,6 +12,7 @@ const NAV: { to: string; label: string; icon: LucideIcon; ready: boolean; badge?
   { to: "/interests", label: "Interests", icon: Send, ready: true, badge: "interests" },
   { to: "/messages", label: "Messages", icon: MessageCircle, ready: true, badge: "messages" },
   { to: "/", label: "My Profile", icon: UserRound, ready: true },
+  { to: "/help", label: "Help", icon: LifeBuoy, ready: true },
 ];
 
 export function Logo({ light = false }: { light?: boolean }) {
