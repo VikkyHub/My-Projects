@@ -4,7 +4,15 @@ import re
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +23,7 @@ from app.db.session import SessionLocal, get_db
 from app.models import Conversation, Message, Profile, User
 from app.models.user import UserStatus
 from app.schemas.social import ConversationItem, MessageIn, MessageOut
+from app.services.events import record_event
 from app.services.rate_limit import hit
 from app.services.realtime import channel, issue_ticket, publish, redeem_ticket
 from app.services.social import build_cards, get_viewer, is_blocked
@@ -153,6 +162,7 @@ async def messages(
 async def send_message(
     conv_id: uuid.UUID,
     body: MessageIn,
+    request: Request,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -171,8 +181,27 @@ async def send_message(
     if not text:
         raise HTTPException(422, "Message is empty")
     if _BLOCK.search(text):
+        await record_event(
+            "message_blocked",
+            category="chat",
+            level="warning",
+            actor=me.public_id,
+            actor_type="member",
+            request=request,
+            message="Message mentioning dowry was blocked",
+            meta={"conversation_id": str(conv.id)},
+        )
         raise HTTPException(422, "Messages about dowry aren't allowed on this platform.")
     if not await hit(get_redis(), f"rl:msg:{me.id}", 20, 60):
+        await record_event(
+            "chat_rate_limited",
+            category="chat",
+            level="warning",
+            actor=me.public_id,
+            actor_type="member",
+            request=request,
+            message="More than 20 messages a minute",
+        )
         raise HTTPException(429, "You're sending messages too fast. Please slow down.")
 
     m = Message(conversation_id=conv.id, sender_id=me.id, body=text, flagged=_flagged(text))
@@ -181,6 +210,17 @@ async def send_message(
     await db.commit()
     await db.refresh(m)
     out = _msg_out(m, me.public_id)
+    if m.flagged:  # message text is never copied into the log
+        await record_event(
+            "message_flagged",
+            category="chat",
+            level="warning",
+            actor=me.public_id,
+            actor_type="member",
+            request=request,
+            message="Message mentions money, contact details or a link",
+            meta={"conversation_id": str(conv.id), "message_id": m.id},
+        )
     event = {"type": "message", "message": out.model_dump(mode="json")}
     await publish(other.id, event)
     await publish(me.id, event)  # my other tabs

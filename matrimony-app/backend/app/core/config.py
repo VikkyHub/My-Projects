@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # A rotated refresh token may be reused for this long (several tabs refreshing at once).
     # After that, reuse is treated as theft and the whole token family is revoked.
     REFRESH_REUSE_GRACE_SECONDS: int = 30
+    # Application log (admin panel) — rows older than this are deleted automatically
+    APP_LOG_RETENTION_DAYS: int = 90
+
     # Staff (admin panel) sessions
     ADMIN_IDLE_MINUTES: int = 30
     ADMIN_SESSION_HOURS: int = 8

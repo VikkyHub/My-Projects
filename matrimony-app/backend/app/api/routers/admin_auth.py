@@ -32,6 +32,7 @@ from app.models import AdminAction, User
 from app.models.user import UserRole, UserStatus
 from app.schemas.admin import StaffLoginIn, StaffLoginOut, StaffMe, StaffTokens, StaffVerifyIn
 from app.services import tokens
+from app.services.events import record_event
 from app.services.rate_limit import hit
 
 router = APIRouter(prefix="/admin/auth", tags=["admin auth"])
@@ -58,14 +59,25 @@ async def login(body: StaffLoginIn, request: Request, db: AsyncSession = Depends
     now = datetime.now(UTC)
     if staff and u.locked_until and u.locked_until > now:
         mins = int((u.locked_until - now).total_seconds() // 60) + 1
+        await record_event(
+            "staff_locked_attempt",
+            category="staff",
+            level="warning",
+            message=f"Sign-in attempt while locked ({mins} min left)",
+            actor=email,
+            actor_type="staff",
+            request=request,
+        )
         raise HTTPException(429, f"Account locked after failed attempts. Try again in {mins} min.")
 
     if not verify_password(body.password, u.password_hash if staff else None):
+        locked = False
         if staff:
             u.failed_logins = (u.failed_logins or 0) + 1
             if u.failed_logins >= settings.ADMIN_MAX_FAILED_LOGINS:
                 u.locked_until = now + timedelta(minutes=settings.ADMIN_LOCKOUT_MINUTES)
                 u.failed_logins = 0
+                locked = True
                 db.add(
                     AdminAction(
                         admin_id=u.id,
@@ -76,8 +88,37 @@ async def login(body: StaffLoginIn, request: Request, db: AsyncSession = Depends
                     )
                 )
             await db.commit()
+        await record_event(
+            "staff_login_failed",
+            category="staff",
+            level="warning",
+            message="Wrong password" if staff else "Unknown email",
+            actor=email,
+            actor_type="staff" if staff else "anonymous",
+            request=request,
+        )
+        if locked:
+            await record_event(
+                "staff_locked_out",
+                category="staff",
+                level="error",
+                actor=email,
+                actor_type="staff",
+                message=f"Locked for {settings.ADMIN_LOCKOUT_MINUTES} min after "
+                f"{settings.ADMIN_MAX_FAILED_LOGINS} wrong passwords",
+                request=request,
+            )
         raise BAD
     if u.status != UserStatus.ACTIVE:
+        await record_event(
+            "staff_disabled_login",
+            category="staff",
+            level="warning",
+            message="Sign-in attempt on a disabled staff account",
+            actor=email,
+            actor_type="staff",
+            request=request,
+        )
         raise HTTPException(403, "This staff account is disabled")
 
     u.failed_logins = 0
@@ -113,8 +154,18 @@ async def verify(body: StaffVerifyIn, request: Request, db: AsyncSession = Depen
     if u is None or u.status != UserStatus.ACTIVE or not u.totp_secret_enc:
         raise HTTPException(401, "Login expired. Please start again.")
 
+    staff_email = decrypt(u.email_enc) if u.email_enc else str(u.id)
     if not verify_totp(decrypt(u.totp_secret_enc), body.code):
         data["tries"] += 1
+        await record_event(
+            "staff_2fa_failed",
+            category="staff",
+            level="warning",
+            message=f"Wrong authenticator code (attempt {data['tries']})",
+            actor=staff_email,
+            actor_type="staff",
+            request=request,
+        )
         if data["tries"] >= MAX_CODE_TRIES:
             await r.delete(key)
             raise HTTPException(401, "Too many wrong codes. Please start again.")
@@ -145,6 +196,14 @@ async def verify(body: StaffVerifyIn, request: Request, db: AsyncSession = Depen
     )
     pair = await tokens.issue_tokens(db, u, device_id="admin-web", scope="admin")
     await db.commit()
+    await record_event(
+        "staff_2fa_setup" if first else "staff_login",
+        category="staff",
+        message=f"{u.role.title()} signed in" + (" and set up 2-step sign-in" if first else ""),
+        actor=staff_email,
+        actor_type="staff",
+        request=request,
+    )
     return StaffTokens(
         access_token=pair.access_token,
         refresh_token=pair.refresh_token,

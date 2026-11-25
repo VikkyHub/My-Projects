@@ -179,3 +179,33 @@ class StaffCreate(BaseModel):
 class StaffCreated(BaseModel):
     staff: StaffRow
     temporary_password: str  # shown ONCE; they must change it on first login
+
+
+class AppEventRow(BaseModel):
+    id: int
+    created_at: datetime
+    level: str
+    category: str
+    event: str
+    actor_type: str | None
+    actor: str | None
+    message: str | None
+    ip: str | None
+    user_agent: str | None
+    request_id: str | None
+    meta: dict | None
+
+
+class LogPage(BaseModel):
+    items: list[AppEventRow]
+    next_before_id: int | None
+
+
+class LogSummary(BaseModel):
+    events_24h: int
+    warnings_24h: int
+    errors_24h: int
+    failed_logins_24h: int
+    member_logins_24h: int
+    staff_logins_24h: int
+    by_category: dict[str, int]

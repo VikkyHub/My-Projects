@@ -3,6 +3,7 @@ import { hasSession } from "./api/client";
 import AdminLogin from "./admin/AdminLogin";
 import AuditPage from "./admin/AuditPage";
 import Dashboard from "./admin/Dashboard";
+import LogsPage from "./admin/LogsPage";
 import PhotosPage from "./admin/PhotosPage";
 import ProfileDetailPage from "./admin/ProfileDetailPage";
 import ProfilesPage from "./admin/ProfilesPage";
@@ -40,6 +41,7 @@ export default function App() {
       <Route path="/admin/reports" element={<ReportsPage />} />
       <Route path="/admin/audit" element={<AuditPage />} />
       <Route path="/admin/staff" element={<StaffPage />} />
+      <Route path="/admin/logs" element={<LogsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

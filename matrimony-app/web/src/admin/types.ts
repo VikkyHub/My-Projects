@@ -112,3 +112,33 @@ export interface StaffRow {
   last_login_at: string | null;
   created_at: string;
 }
+
+export interface AppEventRow {
+  id: number;
+  created_at: string;
+  level: "info" | "warning" | "error";
+  category: string;
+  event: string;
+  actor_type: string | null;
+  actor: string | null;
+  message: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  request_id: string | null;
+  meta: Record<string, unknown> | null;
+}
+
+export interface LogPage {
+  items: AppEventRow[];
+  next_before_id: number | null;
+}
+
+export interface LogSummary {
+  events_24h: number;
+  warnings_24h: number;
+  errors_24h: number;
+  failed_logins_24h: number;
+  member_logins_24h: number;
+  staff_logins_24h: number;
+  by_category: Record<string, number>;
+}

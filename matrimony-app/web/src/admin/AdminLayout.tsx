@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Flag, Heart, Image, LayoutDashboard, LogOut, ScrollText, UserCog, Users, type LucideIcon } from "lucide-react";
+import { Activity, Flag, Heart, Image, LayoutDashboard, LogOut, ScrollText, UserCog, Users, type LucideIcon } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { admin } from "../api/client";
@@ -24,6 +24,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { to: "/admin/photos", label: "Photos", icon: Image, count: stats.data?.photos_pending, show: true },
     { to: "/admin/reports", label: "Reports", icon: Flag, count: stats.data?.reports_open, show: true },
     { to: "/admin/audit", label: "Audit log", icon: ScrollText, show: isAdmin },
+    { to: "/admin/logs", label: "App logs", icon: Activity, show: isAdmin },
     { to: "/admin/staff", label: "Staff", icon: UserCog, show: isAdmin },
   ];
 

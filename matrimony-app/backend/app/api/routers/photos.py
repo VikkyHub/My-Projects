@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models import Photo, PrivacySettings, Profile, User
 from app.schemas.social import PhotoOut, PhotoSettings
 from app.services import images
+from app.services.events import record_event
 from app.services.profiles import compute_completeness, photo_count
 from app.services.social import photo_keys
 from app.services.storage import get_storage, verify_signature
@@ -56,6 +57,7 @@ async def my_photos(user: User = Depends(current_user), db: AsyncSession = Depen
 
 @router.post("/profiles/me/photos", response_model=list[PhotoOut], status_code=201)
 async def upload_photo(
+    request: Request,
     file: UploadFile = File(...),
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
@@ -97,6 +99,15 @@ async def upload_photo(
     await db.flush()
     await _refresh_completeness(db, me)
     await db.commit()
+    await record_event(
+        "photo_duplicate" if dup else "photo_uploaded",
+        category="photo",
+        level="warning" if dup else "info",
+        actor=me.public_id,
+        actor_type="member",
+        message="Same photo already used on another profile — held for review" if dup else None,
+        request=request,
+    )
     return [_out(p) for p in await _list(db, me.id)]
 
 

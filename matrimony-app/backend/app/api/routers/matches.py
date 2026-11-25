@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import Integer, and_, case, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +31,7 @@ from app.models import (
 from app.models.profile import ProfileStatus
 from app.schemas.master import Option
 from app.schemas.social import MatchPage, Preferences, ProfileCard, PublicProfile, ReportIn
+from app.services.events import record_event
 from app.services.profiles import age_on
 from app.services.social import (
     age_bounds,
@@ -401,7 +402,10 @@ async def remove_shortlist(
 # ---------------- block & report ----------------
 @router.post("/profiles/{public_id}/block", status_code=204)
 async def block(
-    public_id: str, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    public_id: str,
+    request: Request,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Hides both people from each other everywhere and closes their conversation."""
     me = await get_viewer(db, user)
@@ -439,12 +443,21 @@ async def block(
     from app.services.realtime import publish  # avoid import cycle at module load
 
     await publish(t.id, {"type": "refresh"})
+    await record_event(
+        "member_blocked",
+        category="safety",
+        actor=me.public_id,
+        actor_type="member",
+        message=f"Blocked {t.public_id}",
+        request=request,
+    )
 
 
 @router.post("/profiles/{public_id}/report", status_code=204)
 async def report(
     public_id: str,
     body: ReportIn,
+    request: Request,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -474,6 +487,28 @@ async def report(
             Report.reported_id == t.id, Report.status == "open"
         )
     )
-    if distinct >= AUTO_HIDE_REPORTS and t.status == ProfileStatus.ACTIVE:
+    hidden = distinct >= AUTO_HIDE_REPORTS and t.status == ProfileStatus.ACTIVE
+    if hidden:
         t.status = ProfileStatus.PENDING_REVIEW
     await db.commit()
+    if not already:
+        await record_event(
+            "report_filed",
+            category="safety",
+            level="warning",
+            actor=me.public_id,
+            actor_type="member",
+            request=request,
+            message=f"Reported {t.public_id}: {body.reason}",
+            meta={"reported": t.public_id, "reason": body.reason},
+        )
+    if hidden:
+        await record_event(
+            "profile_auto_hidden",
+            category="safety",
+            level="error",
+            actor=t.public_id,
+            actor_type="member",
+            request=request,
+            message=f"Hidden for review after {distinct} reports from different members",
+        )

@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models import Conversation, Interest, Message, Profile, User
 from app.schemas.social import InterestCounts, InterestCreate, InterestItem
+from app.services.events import record_event
 from app.services.realtime import publish
 from app.services.social import (
     blocked_clause,
@@ -41,7 +42,10 @@ async def _sent_today(db: AsyncSession, me: Profile) -> int:
 
 @router.post("", response_model=InterestItem, status_code=201)
 async def send_interest(
-    body: InterestCreate, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    body: InterestCreate,
+    request: Request,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     me = await get_viewer(db, user)
     require_active(me, "send interests")
@@ -80,6 +84,14 @@ async def send_interest(
     used = await _sent_today(db, me)
     if used >= _limit(me):
         hint = "" if me.is_premium else " Premium members can send up to 50 a day."
+        await record_event(
+            "interest_limit_reached",
+            category="interest",
+            actor=me.public_id,
+            actor_type="member",
+            message=f"Daily limit of {_limit(me)} reached",
+            request=request,
+        )
         raise HTTPException(429, f"You've used today's {_limit(me)} interests.{hint}")
 
     i = Interest(sender_id=me.id, receiver_id=t.id, note=body.note)
@@ -87,6 +99,14 @@ async def send_interest(
     await db.commit()
     await db.refresh(i)
     await publish(t.id, {"type": "interest", "from": me.first_name})
+    await record_event(
+        "interest_sent",
+        category="interest",
+        actor=me.public_id,
+        actor_type="member",
+        message=f"Interest sent to {t.public_id}",
+        request=request,
+    )
     card = (await build_cards(db, me, [t]))[0]
     return InterestItem(
         id=str(i.id),
@@ -173,6 +193,13 @@ async def accept(
     db.add(conv)
     await db.commit()
     await publish(i.sender_id, {"type": "interest_accepted", "by": me.first_name})
+    await record_event(
+        "interest_accepted",
+        category="interest",
+        actor=me.public_id,
+        actor_type="member",
+        message="Interest accepted — conversation opened",
+    )
     return {"status": "accepted", "conversation_id": str(conv.id)}
 
 

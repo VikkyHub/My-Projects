@@ -17,6 +17,7 @@ from app.schemas.profile import (
 )
 from app.services import otp
 from app.services import profiles as svc
+from app.services.events import record_event
 from app.services.sms import SmsProvider, get_sms_provider
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -51,6 +52,16 @@ async def create_profile(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Profile already exists") from None
+    await record_event(
+        "profile_created",
+        category="profile",
+        actor=p.public_id,
+        actor_type="member",
+        message=f"Profile created by {p.created_by}"
+        + (" — waiting for candidate consent" if p.candidate_consent_at is None else ""),
+        request=request,
+        meta={"created_by": p.created_by, "status": p.status},
+    )
     return svc.to_my_profile_out(p)
 
 
@@ -111,5 +122,13 @@ async def verify_candidate_consent(
     except otp.OtpError as e:
         _raise(e)
     await svc.confirm_candidate_consent(db, p, client_ip(request))
+    await record_event(
+        "candidate_consent",
+        category="profile",
+        actor=p.public_id,
+        actor_type="member",
+        message="Candidate confirmed consent by OTP",
+        request=request,
+    )
     await db.refresh(p)
     return svc.to_my_profile_out(p)

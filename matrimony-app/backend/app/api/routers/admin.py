@@ -19,6 +19,7 @@ from app.core.security import decrypt, encrypt, hash_password, hmac_hash, mask_p
 from app.db.session import get_db
 from app.models import (
     AdminAction,
+    AppEvent,
     Conversation,
     Interest,
     Message,
@@ -33,6 +34,9 @@ from app.models.user import UserRole, UserStatus
 from app.schemas.admin import (
     ActionRow,
     AdminPhoto,
+    AppEventRow,
+    LogPage,
+    LogSummary,
     ModerateIn,
     PhotoActionIn,
     PhotoQueueItem,
@@ -709,3 +713,105 @@ async def staff_reset(
     log(db, me, "staff", str(u.id), "staff_reset", None)
     await db.commit()
     return StaffCreated(staff=_staff_row(u), temporary_password=pw)
+
+
+# ---------------- application log (admin only: contains IP addresses) ----------------
+FAILED_LOGIN_EVENTS = ("otp_failed", "staff_login_failed", "staff_2fa_failed")
+
+
+@router.get("/logs", response_model=LogPage)
+async def app_logs(
+    level: str | None = Query(None, pattern="^(info|warning|error)$"),
+    category: str | None = Query(
+        None, pattern="^(auth|staff|profile|photo|interest|chat|safety|system)$"
+    ),
+    actor: str | None = Query(None, max_length=120),
+    q: str | None = Query(None, max_length=80),
+    before_id: int | None = None,
+    limit: int = Query(100, ge=1, le=200),
+    _: User = Depends(current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    conds = []
+    if level == "warning":  # "warnings" view also shows errors
+        conds.append(AppEvent.level.in_(("warning", "error")))
+    elif level:
+        conds.append(AppEvent.level == level)
+    if category:
+        conds.append(AppEvent.category == category)
+    if actor:
+        conds.append(AppEvent.actor == actor.strip())
+    if q:
+        like = f"%{q.strip()}%"
+        conds.append(
+            or_(
+                AppEvent.event.ilike(like),
+                AppEvent.message.ilike(like),
+                AppEvent.actor.ilike(like),
+                AppEvent.request_id == q.strip(),
+                func.host(AppEvent.ip) == q.strip(),
+            )
+        )
+    if before_id:
+        conds.append(AppEvent.id < before_id)
+    rows = (
+        await db.scalars(
+            select(AppEvent).where(*conds).order_by(AppEvent.id.desc()).limit(limit + 1)
+        )
+    ).all()
+    more = len(rows) > limit
+    rows = rows[:limit]
+    return LogPage(
+        items=[
+            AppEventRow(
+                id=r.id,
+                created_at=r.created_at,
+                level=r.level,
+                category=r.category,
+                event=r.event,
+                actor_type=r.actor_type,
+                actor=r.actor,
+                message=r.message,
+                ip=str(r.ip) if r.ip else None,
+                user_agent=r.user_agent,
+                request_id=r.request_id,
+                meta=r.meta,
+            )
+            for r in rows
+        ],
+        next_before_id=rows[-1].id if more and rows else None,
+    )
+
+
+@router.get("/logs/summary", response_model=LogSummary)
+async def app_logs_summary(_: User = Depends(current_admin), db: AsyncSession = Depends(get_db)):
+    since = datetime.now(UTC) - timedelta(hours=24)
+    recent = AppEvent.created_at >= since
+    row = (
+        await db.execute(
+            select(
+                func.count(),
+                func.count().filter(AppEvent.level == "warning"),
+                func.count().filter(AppEvent.level == "error"),
+                func.count().filter(AppEvent.event.in_(FAILED_LOGIN_EVENTS)),
+                func.count().filter(AppEvent.event.in_(("member_login", "member_signup"))),
+                func.count().filter(AppEvent.event.in_(("staff_login", "staff_2fa_setup"))),
+            ).where(recent)
+        )
+    ).one()
+    cats = dict(
+        (
+            await db.execute(
+                select(AppEvent.category, func.count()).where(recent).group_by(AppEvent.category)
+            )
+        ).all()
+    )
+    return LogSummary(
+        events_24h=row[0],
+        warnings_24h=row[1],
+        errors_24h=row[2],
+        failed_logins_24h=row[3],
+        member_logins_24h=row[4],
+        staff_logins_24h=row[5],
+        by_category=cats,
+    )

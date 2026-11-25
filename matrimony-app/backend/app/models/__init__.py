@@ -1,6 +1,7 @@
 """Import every model so Base.metadata is complete (Alembic autogenerate, tests)."""
 
 from app.models.billing import ContactUnlock, Payment, Plan, Subscription
+from app.models.event import AppEvent
 from app.models.interaction import (
     Block,
     Conversation,
@@ -36,6 +37,7 @@ from app.models.user import AdminAction, Consent, Device, RefreshToken, User
 
 __all__ = [
     "AdminAction",
+    "AppEvent",
     "Block",
     "City",
     "Community",

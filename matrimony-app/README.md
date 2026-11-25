@@ -98,7 +98,13 @@ To see real moderation behaviour (new profiles/photos waiting for approval), set
 | Warn / suspend members, reveal phone (logged) | ✅ | ✅ |
 | Ban, lift bans | — | ✅ |
 | Invite/disable staff, reset their login | — | ✅ |
-| Audit log | — | ✅ |
+| Audit log, App logs | — | ✅ |
+
+**App logs** (admins only): sign-ins (members and staff), failed attempts and lockouts,
+security events (stolen-token detection, flagged chat, duplicate photos, auto-hidden profiles),
+activity, and server errors with a request ID. Phone numbers are masked, chat text is never
+logged, and entries are deleted after 90 days (`APP_LOG_RETENTION_DAYS`). Every API response
+carries an `X-Request-ID` header you can search for.
 
 Staff sessions end after 30 minutes idle or 8 hours, and close with the browser. 5 wrong passwords
 lock the account for 15 minutes. Every action is recorded in the audit log.
@@ -117,7 +123,7 @@ Full, live documentation: **http://localhost:8000/docs**
 | Interests | `POST /interests`, `GET /interests?box=received\|sent\|accepted`, `POST /interests/{id}/accept\|decline\|withdraw`, `GET /interests/counts` |
 | Chat | `GET /conversations`, `GET/POST /conversations/{id}/messages`, `POST /conversations/{id}/read`, `WS /ws?ticket=` |
 | Staff auth | `POST /admin/auth/login`, `POST /admin/auth/verify`, `GET /admin/auth/me` |
-| Admin | `GET /admin/stats`, `GET /admin/profiles`, `GET /admin/profiles/{id}`, `POST …/moderate`, `POST …/reveal-phone`, `GET /admin/photos`, `POST /admin/photos/{id}/moderate`, `GET /admin/reports`, `POST /admin/reports/{id}/resolve`, `GET /admin/audit`, `GET/POST /admin/staff`, `POST /admin/staff/{id}/disable\|enable\|reset` |
+| Admin | `GET /admin/stats`, `GET /admin/profiles`, `GET /admin/profiles/{id}`, `POST …/moderate`, `POST …/reveal-phone`, `GET /admin/photos`, `POST /admin/photos/{id}/moderate`, `GET /admin/reports`, `POST /admin/reports/{id}/resolve`, `GET /admin/audit`, `GET /admin/logs`, `GET /admin/logs/summary`, `GET/POST /admin/staff`, `POST /admin/staff/{id}/disable\|enable\|reset` |
 
 ## Rules already enforced in code
 - Phone numbers are stored **HMAC-hashed + AES-GCM encrypted**, never as plain text.

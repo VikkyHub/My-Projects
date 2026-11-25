@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, ShieldCheck, ShieldOff, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Modal } from "../components/Kit";
 import { Button, ErrorBox, Field, Input, Select } from "../components/ui";
 import AdminLayout from "./AdminLayout";
@@ -85,6 +86,8 @@ export default function StaffPage() {
                   </td>
                   <td className="px-3 py-4 text-muted">{when(s.last_login_at)}</td>
                   <td className="px-3 py-4 text-right">
+                    <div className="flex justify-end gap-3">
+                      <Link to={`/admin/logs?category=staff&actor=${encodeURIComponent(s.email ?? "")}`} className="text-xs font-semibold text-brand-700 hover:underline">Sign-in history</Link>
                     {s.id !== me.data?.id && (
                       <div className="flex justify-end gap-2">
                         <button onClick={() => confirm(`Reset ${s.name}'s password and authenticator?`) && act.mutate({ id: s.id, a: "reset" })} className="text-xs font-semibold text-ink/75 hover:text-ink">Reset login</button>
@@ -95,6 +98,7 @@ export default function StaffPage() {
                         )}
                       </div>
                     )}
+                    </div>
                   </td>
                 </tr>
               ))}
