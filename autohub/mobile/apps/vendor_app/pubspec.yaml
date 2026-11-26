@@ -1,0 +1,22 @@
+name: autohub_vendor
+description: AutoHub vendor app.
+publish_to: none
+version: 0.1.0+1
+resolution: workspace
+environment:
+  sdk: ^3.9.0
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  autohub_core:
+    path: ../../packages/autohub_core
+  flutter_riverpod: ^3.5.0
+  go_router: ^18.1.4
+  url_launcher: ^6.3.3
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true

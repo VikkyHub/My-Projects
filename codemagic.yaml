@@ -1,0 +1,81 @@
+# AutoHub (autohub/) — cloud builds for both apps — Android APK/AAB on Linux, iOS on Codemagic's Macs (no Mac needed).
+# Setup: connect this repo at codemagic.io, then in Team settings add
+#   • an App Store Connect API key integration named "autohub_asc" (for iOS signing + TestFlight)
+#   • env group "autohub" with API_URL (e.g. https://api.autohub.in/v1)
+# Docs: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/
+
+definitions:
+  flutter_env: &flutter_env
+    flutter: stable
+    groups: [autohub]
+
+workflows:
+  customer-android:
+    name: Customer app · Android
+    instance_type: linux_x2
+    working_directory: autohub/mobile/apps/customer_app
+    environment: *flutter_env
+    scripts:
+      - flutter pub get
+      - flutter test
+      - flutter build apk --release --split-per-abi --dart-define=API_URL=$API_URL
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+
+  customer-ios:
+    name: Customer app · iOS → TestFlight
+    instance_type: mac_mini_m2
+    working_directory: autohub/mobile/apps/customer_app
+    integrations:
+      app_store_connect: autohub_asc
+    environment:
+      <<: *flutter_env
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.autohub.customer
+    scripts:
+      - flutter pub get
+      - xcode-project use-profiles
+      - flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --dart-define=API_URL=$API_URL
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  vendor-android:
+    name: Partner app · Android
+    instance_type: linux_x2
+    working_directory: autohub/mobile/apps/vendor_app
+    environment: *flutter_env
+    scripts:
+      - flutter pub get
+      - flutter test
+      - flutter build apk --release --split-per-abi --dart-define=API_URL=$API_URL
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+
+  vendor-ios:
+    name: Partner app · iOS → TestFlight
+    instance_type: mac_mini_m2
+    working_directory: autohub/mobile/apps/vendor_app
+    integrations:
+      app_store_connect: autohub_asc
+    environment:
+      <<: *flutter_env
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.autohub.partner
+    scripts:
+      - flutter pub get
+      - xcode-project use-profiles
+      - flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --dart-define=API_URL=$API_URL
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

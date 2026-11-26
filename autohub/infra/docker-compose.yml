@@ -1,0 +1,35 @@
+# Local development dependencies: Postgres 16 + PostGIS, Redis.
+# Usage (from repo root):  docker compose -f infra/docker-compose.yml up -d
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: autohub
+      POSTGRES_PASSWORD: autohub
+      POSTGRES_DB: autohub
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autohub"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  # Applies migrations: docker compose -f infra/docker-compose.yml run --rm migrate
+  migrate:
+    image: ghcr.io/amacneil/dbmate:2
+    profiles: [tools]
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://autohub:autohub@postgres:5432/autohub?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /db/migrations
+      DBMATE_SCHEMA_FILE: /db/schema.sql
+    volumes: [../backend/db:/db]
+    command: ["--wait", "up"]
+
+volumes:
+  pgdata:

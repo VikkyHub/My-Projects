@@ -1,0 +1,47 @@
+{
+  "name": "autohub-backend",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "dev": "tsc-watch -p tsconfig.build.json --onSuccess \"node dist/main.js\"",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "db:types": "kysely-codegen --dialect postgres --camel-case --exclude-pattern \"(spatial_ref_sys|schema_migrations|geography_columns|geometry_columns)\" --out-file src/infra/db/db.types.ts && node scripts/patch-db-types.js",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "jest --runInBand",
+    "db:setup": "npm run db:migrate && npm run db:seed"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.12",
+    "@nestjs/core": "^11.2.12",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/platform-express": "^11.2.12",
+    "@nestjs/swagger": "^11.4.8",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "ioredis": "^5.11.1",
+    "kysely": "^0.28.20",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.11",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "dbmate": "^2.38.2",
+    "jest": "^30.5.2",
+    "kysely-codegen": "^0.20.0",
+    "supertest": "^7.3.2",
+    "ts-jest": "^29.4.15",
+    "tsc-watch": "^7.2.1",
+    "tsx": "^4.23.15",
+    "typescript": "5.9"
+  }
+}
