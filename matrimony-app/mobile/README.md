@@ -12,7 +12,7 @@ Package name: **`com.ghargharmatrimony.app`** — change it in `android/app/buil
 
 ## 1. One-time setup (Windows)
 
-1. Install [Flutter](https://docs.flutter.dev/get-started/install/windows/mobile) (3.38 or newer) and Android Studio.
+1. Install [Flutter](https://docs.flutter.dev/get-started/install/windows/mobile) (3.50 or newer — the app needs Dart 3.14) and Android Studio.
 2. In Android Studio → **More Actions → SDK Manager**, install the latest Android SDK, *Command-line Tools* and *Build-Tools*.
 3. Check everything is green:
 
